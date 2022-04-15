@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "/Zh2pEQ1B0hVI3Hm9Wk0YVGW8CGHARiS5r8+54XNCz+ip0nLmm0BdDkBd5PxL0IVshzp2X9iKEIPus027eYLVA==",
+  "success": true,
+  "projectFilePath": "D:\\Work\\ZeroWAS\\ZeroWAS.App\\ZeroWAS.App.csproj",
+  "expectedPackageFiles": [
+    "D:\\Program Files\\Nuget\\.nuget\\packages\\zerowas\\1.0.0\\zerowas.1.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

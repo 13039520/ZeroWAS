@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	
+	<PropertyGroup>
+		<TargetFrameworks>net6.0;net5.0;net2.0</TargetFrameworks>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<Description>Web application server</Description>
+		<PackageIcon>favicon.png</PackageIcon>
+		<ProduceReferenceAssembly>False</ProduceReferenceAssembly>
+		<Authors>ruzi</Authors>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="favicon.png" Pack="true" PackagePath="" />
+	</ItemGroup>
+
+</Project>

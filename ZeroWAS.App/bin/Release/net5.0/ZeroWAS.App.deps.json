@@ -1,0 +1,41 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v5.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v5.0": {
+      "ZeroWAS.App/1.0.0": {
+        "dependencies": {
+          "ZeroWAS": "1.0.0"
+        },
+        "runtime": {
+          "ZeroWAS.App.dll": {}
+        }
+      },
+      "ZeroWAS/1.0.0": {
+        "runtime": {
+          "lib/net5.0/ZeroWAS.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ZeroWAS.App/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "ZeroWAS/1.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-H8ztPID+8wL8o3g1EQQ2gzvqGAP5dbHb51mblfLlnl0ko9aigyMc2rA/P6drhAprZHiYU757dk0zfzEERvh0Tg==",
+      "path": "zerowas/1.0.0",
+      "hashPath": "zerowas.1.0.0.nupkg.sha512"
+    }
+  }
+}

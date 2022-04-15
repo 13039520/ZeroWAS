@@ -1,0 +1,6 @@
+D:\Work\ZeroWAS\ZeroWAS.App\bin\Release\net6.0\publish\ZeroWAS.App.exe
+D:\Work\ZeroWAS\ZeroWAS.App\bin\Release\net6.0\publish\site.txt
+D:\Work\ZeroWAS\ZeroWAS.App\bin\Release\net6.0\publish\ZeroWAS.App.dll
+D:\Work\ZeroWAS\ZeroWAS.App\bin\Release\net6.0\publish\ZeroWAS.App.deps.json
+D:\Work\ZeroWAS\ZeroWAS.App\bin\Release\net6.0\publish\ZeroWAS.App.runtimeconfig.json
+D:\Work\ZeroWAS\ZeroWAS.App\bin\Release\net6.0\publish\ZeroWAS.App.pdb

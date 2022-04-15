@@ -1,0 +1,35 @@
+ListenIP=0.0.0.0
+ListenPort=6002
+//PFXCertificateFilePath=@AppBaseDir/localhost.pfx
+//PFXCertificatePassword=12345
+
+//大文件输出阈值：10485760=10M 4194304=4M
+HttpLargeFileOutputThreshold=4194304
+//大文件输出速率：1048576=1M/s 524288=512k/s
+HttpLargeFileOutputRate=1048576
+//URI最大长度：1048576=1M
+HttpMaxURILength=1048576
+//无数据活动保留时常
+HttpNoDataActivityHoldTime=15000
+//内容实体长度：419430400=400M
+HttpMaxContentLength=419430400
+
+//静态文件后缀：
+SiteStaticFileSuffix=.html .xml .htm .css .js .txt .csv
+SiteStaticFileSuffix=.zip .rar
+SiteStaticFileSuffix=.ico .jpg .jpeg .png .gif .webp .svg .psd .ai .cdr .tiff .eps .epsf
+SiteStaticFileSuffix=.m3u8 .ts
+//目录默认文件：
+SiteDefaultFile=Index.html Index.htm Default.html Default.htm
+//站点主目录：@AppBaseDir/wwwroot
+SiteHomeDirectory=D:\Work\ZeroUI\wwwroot
+//虚拟目录(最后的目录名称不能重复)：
+SiteVirtualDirectory=D:\testFiles
+SiteVirtualDirectory=E:\videos
+
+//MIME Type
+SiteMIME=.7z=application/octet-stream
+SiteMIME=.apk=application/octet-stream
+SiteMIME=.cur=image/x-icon
+SiteMIME=.m3u8=application/x-mpegURL
+SiteMIME=.ts=video/MP2T
