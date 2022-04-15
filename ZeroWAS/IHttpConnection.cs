@@ -10,7 +10,7 @@ namespace ZeroWAS
         event HttpSocketDisposedHandler<TUser> OnDisposed;
         Http.Handlers.ErrorHandler OnErrorHandler { get; set; }
         Http.Handlers.RawStreamReceivedHandler<TUser> OnRawStreamReceivedHandler { get; set; }
-        bool IsHttps { get; }
+        bool Secure { get; }
         string WebSocketChannelPath { get; set; }
         string RawSocketChannelPath { get; set; }
         TUser User { get; set; }

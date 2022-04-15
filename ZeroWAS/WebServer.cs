@@ -17,7 +17,7 @@ namespace ZeroWAS
         private IWebApplication _WebApp;
         private IWebSocketHub<TUser> _WebSocketHub = new WebSocket.Hub<TUser>();
         private IRawSocketHub<TUser> _RawSocketHub = new RawSocket.Hub<TUser>();
-        private System.Security.Cryptography.X509Certificates.X509Certificate2 _x509Certificate2 = null;
+        private System.Security.Cryptography.X509Certificates.X509Certificate2 _x509Cer = null;
 
         public IWebSocketHub<TUser> WebSocketHub { get { return _WebSocketHub; } }
         public IRawSocketHub<TUser> RawSocketHub { get { return _RawSocketHub; } }
@@ -40,7 +40,7 @@ namespace ZeroWAS
             _backlog = backlog < 1 ? 500 : backlog;
             if (httpServer.UseHttps)
             {
-                _x509Certificate2 = new System.Security.Cryptography.X509Certificates.X509Certificate2(httpServer.PFXCertificateFilePath, httpServer.PFXCertificatePassword);
+                _x509Cer = httpServer.X509Cer;
             }
             _listenSocket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
         }
@@ -227,7 +227,7 @@ namespace ZeroWAS
             Http.Connection<TUser> connection = new Http.Connection<TUser>(
                 socket,
                 _WebApp,
-                _x509Certificate2);
+                _x509Cer);
             lock (clinetIdLock)
             {
                 clinetId++;

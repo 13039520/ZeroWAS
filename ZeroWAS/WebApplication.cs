@@ -10,13 +10,18 @@ namespace ZeroWAS
         /// .NET 运行时目录
         /// </summary>
         public readonly string RuntimeDirectory = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
-
+        private System.Security.Cryptography.X509Certificates.X509Certificate2 _X509Cer = null;
         private int _ListenPort = 5002;
         public string ListenIP { get; set; }
         public int ListenPort { get { return _ListenPort; } set { if (value > 0 && value < 65535) { _ListenPort = value; } } }
         public string HostName { get; set; }
         public string PFXCertificateFilePath { get; set; }
         public string PFXCertificatePassword { get; set; }
+        public System.Security.Cryptography.X509Certificates.X509Certificate2 X509Cer
+        {
+            get { return _X509Cer; }
+            set { _X509Cer = value; }
+        }
         public bool UseHttps { get; set; }
         public Uri HomePageUri { get; set; }
         public string ServerName { get; set; }
@@ -468,7 +473,12 @@ namespace ZeroWAS
             }
             if (!string.IsNullOrEmpty(reval.PFXCertificateFilePath) && !string.IsNullOrEmpty(reval.PFXCertificatePassword) && System.IO.File.Exists(reval.PFXCertificateFilePath))
             {
-                reval.UseHttps = true;
+                try
+                {
+                    reval.X509Cer = new System.Security.Cryptography.X509Certificates.X509Certificate2(reval.PFXCertificateFilePath, reval.PFXCertificatePassword);
+                    reval.UseHttps = true;
+                }
+                catch { }
             }
             if (HttpConnectionMax > 0)
             {

@@ -11,6 +11,7 @@ namespace ZeroWAS
         string HostName { get;  }
         string PFXCertificateFilePath { get; }
         string PFXCertificatePassword { get; }
+        System.Security.Cryptography.X509Certificates.X509Certificate2 X509Cer { get; }
         bool UseHttps { get; }
         Uri HomePageUri { get; }
         string ServerName { get;  }

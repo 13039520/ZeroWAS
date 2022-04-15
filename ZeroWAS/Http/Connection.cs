@@ -37,7 +37,7 @@ namespace ZeroWAS.Http
         private System.Net.Sockets.NetworkStream ns = null;
         private IWebApplication webApp = null;
         IHttpDataReceiver receiver = null;
-        bool _IsHttps = false;
+        bool _secure = false;
         private DateTime _LastActivityTime = DateTime.Now;
 
         public string WebSocketChannelPath { get; set; }
@@ -52,8 +52,8 @@ namespace ZeroWAS.Http
         public Common.SocketTypeEnum SocketType { get { return _SocketType; } set { _SocketType = value; } }
 
         public DateTime LastActivityTime { get { return _LastActivityTime; } set { _LastActivityTime = value; } }
-
-        public bool IsHttps { get { return _IsHttps; } }
+        //secure
+        public bool Secure { get { return _secure; } }
         public Http.Handlers.ErrorHandler OnErrorHandler { get; set; }
         public Http.Handlers.RawStreamReceivedHandler<TUser> OnRawStreamReceivedHandler { get; set; }
         public event HttpSocketDisposedHandler<TUser> OnDisposed;
@@ -66,7 +66,7 @@ namespace ZeroWAS.Http
             }
             if (x509Cer != null)
             {
-                _IsHttps = true;
+                _secure = true;
             }
             this.socketAccepter = socketAccepter;
             this.webApp = webApp;
@@ -92,7 +92,7 @@ namespace ZeroWAS.Http
                 string userRemotePort = System.Text.RegularExpressions.Regex.Replace(remoteEndPointStr, @"^.[^:]+:", "");
 
                 int len = 2048;
-                if (IsHttps)
+                if (Secure)
                 {
                     this.ns = new System.Net.Sockets.NetworkStream(socketAccepter, false);
                     this.ns.WriteTimeout = 15000;
@@ -202,7 +202,7 @@ namespace ZeroWAS.Http
             bool reval = true;
             try
             {
-                if (IsHttps)
+                if (Secure)
                 {
                     sslStream.Write(bytes);
                     sslStream.Flush();
