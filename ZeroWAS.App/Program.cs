@@ -70,7 +70,7 @@ namespace ZeroWAS.App
                         Console.WriteLine("【{0}】{1}:ENTER", wsChannelPath, user);
                         return new ZeroWAS.WebSocket.AuthResult<string> { IsOk = true, User = user, WriteMsg = "Welcome " + user };
                     }
-                    return new ZeroWAS.WebSocket.AuthResult<string> { IsOk = false, User = "", WriteMsg = "必须提供用户凭证！" };
+                    return new ZeroWAS.WebSocket.AuthResult<string> { IsOk = false, User = "", WriteMsg = "missing identity." };
                 },
                 OnDisconnectedHandler = (context, ex) =>
                 {
@@ -99,13 +99,13 @@ namespace ZeroWAS.App
                     if (!string.IsNullOrEmpty(user) && user.Length < 30)
                     {
                         Console.WriteLine("【{0}】{1}:ENTER", wsChannelPath, user);
-                        if (user != "张山")
+                        if (user != "user001")
                         {
                             return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = true, User = user, WriteData = "Welcome to the chat room." };
                         }
                         return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = false, User = user, WriteData = "blacklisted." };
                     }
-                    return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = false, User = "", WriteData = "必须提供用户凭证！" };
+                    return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = false, User = "", WriteData = "missing identity." };
                 },
                 OnDisconnectedHandler = (context, ex) =>
                 {
