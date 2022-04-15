@@ -7,6 +7,7 @@
 		<PackageIcon>favicon.png</PackageIcon>
 		<ProduceReferenceAssembly>False</ProduceReferenceAssembly>
 		<Authors>ruzi</Authors>
+		<PackageProjectUrl>https://github.com/13039520/ZeroWAS</PackageProjectUrl>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Include="favicon.png" Pack="true" PackagePath="" />
