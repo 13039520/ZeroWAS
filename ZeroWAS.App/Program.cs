@@ -11,7 +11,7 @@ namespace ZeroWAS.App
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
 
-            if (HttpListener())
+            if (ZeroWASInit())
             {
                 while (true)
                 {
@@ -29,7 +29,7 @@ namespace ZeroWAS.App
             webServer?.Dispose();
         }
 
-        static bool HttpListener()
+        static bool ZeroWASInit()
         {
             /*site config：*/
             System.IO.FileInfo config = new System.IO.FileInfo(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "site.txt"));
