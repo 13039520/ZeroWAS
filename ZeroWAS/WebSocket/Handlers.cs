@@ -6,7 +6,7 @@ namespace ZeroWAS.WebSocket
 {
     public class Handlers<TUser>: IWebSocketHandlers<TUser>
     {
-        public delegate AuthResult<TUser> ConnectedHandler(IHttpRequest req, string wsChannelPath);
+        public delegate AuthResult<TUser> ConnectedHandler(IWebApplication server, IHttpRequest req, string wsChannelPath);
         public delegate void DisconnectedHandler(IWebSocketContext<TUser> context, Exception ex);
         public delegate void TextFrameReceivedHandler(IWebSocketContext<TUser> context, string text);
         public delegate void ContinuationFrameReceivedHandler(IWebSocketContext<TUser> context, byte[] content, bool FIN);

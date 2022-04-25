@@ -30,6 +30,8 @@ namespace ZeroWAS
         Http.Handlers.RequestReceivedHandler OnRequestReceivedHandler { get; set; }
         Http.Handlers.ResponseEndHandler OnResponseEndHandler { get; set; }
 
+        void AddService(Type serviceType, object serviceInstance);
+        object GetService(Type serviceType);
 
         string MapPath(string vPath);
         System.IO.FileInfo GetStaticFile(string vPath);

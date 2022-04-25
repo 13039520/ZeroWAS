@@ -37,7 +37,7 @@ namespace ZeroWAS.RawSocket
             _HttpServer = httpServer;
             _SocketAccepter = socketAccepter;
             _HttpRequest = httpRequest;
-            _Context = new Context<TUser>(_Channel, HttpRequest, _SocketAccepter);
+            _Context = new Context<TUser>(_Channel, HttpRequest, _SocketAccepter, httpServer);
             if (_Channel.Handlers != null)
             {
                 _OnConnectedHandler = _Channel.Handlers.OnConnectedHandler;
@@ -116,14 +116,14 @@ namespace ZeroWAS.RawSocket
             {
                 try
                 {
-                    AuthResult<TUser> rSAuthResult = _OnConnectedHandler(HttpRequest, _Channel.Path);
+                    AuthResult<TUser> rSAuthResult = _OnConnectedHandler(HttpServer, HttpRequest, _Channel.Path);
                     if (rSAuthResult == null)
                     {
                         throw new Exception("Authentication failed");
                     }
                     _SocketAccepter.User = rSAuthResult.User;
                     _SocketAccepter.RawSocketChannelPath = _Channel.Path;
-                    _Context = new Context<TUser>(_Channel, HttpRequest, _SocketAccepter);
+                    _Context = new Context<TUser>(_Channel, HttpRequest, _SocketAccepter, HttpServer);
                     bool hasWriteData = !string.IsNullOrEmpty(rSAuthResult.WriteData);
 
                     //握手完成：

@@ -10,6 +10,7 @@ namespace ZeroWAS
         TUser User { get; }
         IHttpRequest UpgradeInfo { get; }
         IRawSocketChannel<TUser> Channel { get; }
+        IWebApplication Server { get; }
 
         void SendData(IRawSocketData data);
         void SendData(IRawSocketData data, TUser toWSUser);

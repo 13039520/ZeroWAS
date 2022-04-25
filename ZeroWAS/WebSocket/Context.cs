@@ -11,19 +11,22 @@ namespace ZeroWAS.WebSocket
         TUser _User;
         IWebSocketChannel<TUser> _Channel;
         IHttpConnection<TUser> _Accepter;
+        IWebApplication _Server;
 
         public long ClinetId { get { return _ClinetId; } }
         public IHttpRequest UpgradeInfo { get { return _UpgradeInfo; } }
         public TUser User { get { return _User; } }
         public IWebSocketChannel<TUser> Channel { get { return _Channel; } }
+        public IWebApplication Server { get; }
 
-        public Context(IWebSocketChannel<TUser> channel, IHttpRequest upgradeInfo, IHttpConnection<TUser> accepter)
+        public Context(IWebSocketChannel<TUser> channel, IHttpRequest upgradeInfo, IHttpConnection<TUser> accepter, IWebApplication server)
         {
             _Channel = channel;
             _UpgradeInfo = upgradeInfo;
             _Accepter = accepter;
             _ClinetId = accepter.ClinetId;
             _User = accepter.User;
+            _Server = server;
         }
 
         public void SendData(string message)

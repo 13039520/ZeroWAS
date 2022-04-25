@@ -6,6 +6,8 @@ namespace ZeroWAS
 {
     public class WebApplication : IWebApplication
     {
+        private static object _servicesLock = new object();
+        private Dictionary<Type, object> _services = new Dictionary<Type, object>();
         /// <summary>
         /// .NET 运行时目录
         /// </summary>
@@ -177,6 +179,22 @@ namespace ZeroWAS
                 }
             }
             return reval;
+        }
+
+        public void AddService(Type serviceType, object serviceInstance)
+        {
+            if(serviceInstance == null) { return; }
+            if (_services.ContainsKey(serviceType)) { return; }
+            lock (_servicesLock)
+            {
+                if (_services.ContainsKey(serviceType)) { return; }
+                _services.Add(serviceType, serviceInstance);
+            }
+        }
+        public object GetService(Type serviceType)
+        {
+            if (_services.ContainsKey(serviceType)) { return _services[serviceType]; }
+            return null;
         }
 
 

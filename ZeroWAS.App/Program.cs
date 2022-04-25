@@ -62,7 +62,7 @@ namespace ZeroWAS.App
             };
             webServer.WebSocketHub.ChannelAdd("/WebSocket", new ZeroWAS.WebSocket.Handlers<string>
             {
-                OnConnectedHandler = (req, wsChannelPath) =>
+                OnConnectedHandler = (server, req, wsChannelPath) =>
                 {
                     string user = req.QueryString != null ? req.QueryString["name"] : "";
                     if (!string.IsNullOrEmpty(user) && user.Length < 30)
@@ -93,7 +93,7 @@ namespace ZeroWAS.App
             });
             webServer.RawSocketHub.ChannelAdd("/RawSocket", new ZeroWAS.RawSocket.Handlers<string>
             {
-                OnConnectedHandler = (req, wsChannelPath) =>
+                OnConnectedHandler = (server, req, wsChannelPath) =>
                 {
                     string user = req.QueryString != null ? req.QueryString["name"] : "";
                     if (!string.IsNullOrEmpty(user) && user.Length < 30)

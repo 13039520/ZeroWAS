@@ -62,7 +62,7 @@ namespace ZeroWAS.WebSocket
                 _OnBinaryFrameReceivedHandler = _Channel.Handlers.OnBinaryFrameReceivedHandler;
                 _OnContinuationFrameReceivedHandler = _Channel.Handlers.OnContinuationFrameReceivedHandler;
             }
-            _Context = new Context<TUser>(_Channel, HttpRequest, _SocketAccepter);
+            _Context = new Context<TUser>(_Channel, HttpRequest, _SocketAccepter, httpServer);
             this.wsClinetId = socketAccepter.ClinetId;
             _SocketAccepter.OnDisposed += _SocketAccepter_OnDisposed;
 
@@ -294,14 +294,14 @@ namespace ZeroWAS.WebSocket
             {
                 try
                 {
-                    AuthResult<TUser> wSAuthResult = _OnConnectedHandler(HttpRequest, _Channel.Path);
+                    AuthResult<TUser> wSAuthResult = _OnConnectedHandler(HttpServer, HttpRequest, _Channel.Path);
                     if (wSAuthResult == null)
                     {
                         throw new Exception("Authentication failed");
                     }
                     _SocketAccepter.User = wSAuthResult.User;
                     _SocketAccepter.WebSocketChannelPath = _Channel.Path;
-                    _Context = new Context<TUser>(_Channel, HttpRequest, _SocketAccepter);
+                    _Context = new Context<TUser>(_Channel, HttpRequest, _SocketAccepter, HttpServer);
                     if (!string.IsNullOrEmpty(wSAuthResult.WriteMsg))
                     {
                         _Context.SendData(wSAuthResult.WriteMsg, _SocketAccepter.User);
