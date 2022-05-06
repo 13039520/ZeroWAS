@@ -12,6 +12,7 @@ namespace ZeroWAS
         IWebSocketChannel<TUser> Channel { get; }
 
         IWebApplication Server { get; }
+        object GetService(Type serviceType);
 
         void SendData(string message);
         void SendData(string message, TUser toWSUser);

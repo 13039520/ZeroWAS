@@ -23,6 +23,11 @@ namespace ZeroWAS.Http
         /// </summary>
         public IWebApplication Server { get { return _Server; } }
 
+        public object GetService(Type serviceType)
+        {
+            return Server.GetService(serviceType);
+        }
+
         public Context(IWebApplication server,IHttpRequest request, IHttpResponse response)
         {
             if (server == null)

@@ -19,6 +19,11 @@ namespace ZeroWAS.RawSocket
         public IRawSocketChannel<TUser> Channel { get { return _Channel; } }
         public IWebApplication Server { get; }
 
+        public object GetService(Type serviceType)
+        {
+            return Server.GetService(serviceType);
+        }
+
         public Context(IRawSocketChannel<TUser> channel, IHttpRequest upgradeInfo, IHttpConnection<TUser> accepter, IWebApplication server)
         {
             _Channel = channel;

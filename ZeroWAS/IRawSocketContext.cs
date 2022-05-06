@@ -11,7 +11,7 @@ namespace ZeroWAS
         IHttpRequest UpgradeInfo { get; }
         IRawSocketChannel<TUser> Channel { get; }
         IWebApplication Server { get; }
-
+        object GetService(Type serviceType);
         void SendData(IRawSocketData data);
         void SendData(IRawSocketData data, TUser toWSUser);
 

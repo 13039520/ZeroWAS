@@ -18,7 +18,10 @@ namespace ZeroWAS.WebSocket
         public TUser User { get { return _User; } }
         public IWebSocketChannel<TUser> Channel { get { return _Channel; } }
         public IWebApplication Server { get; }
-
+        public object GetService(Type serviceType)
+        {
+            return Server.GetService(serviceType);
+        }
         public Context(IWebSocketChannel<TUser> channel, IHttpRequest upgradeInfo, IHttpConnection<TUser> accepter, IWebApplication server)
         {
             _Channel = channel;

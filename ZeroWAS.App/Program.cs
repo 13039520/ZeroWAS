@@ -129,7 +129,7 @@ namespace ZeroWAS.App
             /*http request with missing handler：*/
             webServer.WebApp.OnRequestReceivedHandler = (context) =>
             {
-                var userService = context.Server.GetService(typeof(UserService)) as UserService;
+                var userService = context.GetService(typeof(UserService)) as UserService;
                 string userName = userService.GetUserNameByCookie(context.Request);
                 if (string.IsNullOrEmpty(userName))
                 {
@@ -171,6 +171,7 @@ namespace ZeroWAS.App
                 },
                 OnDisconnectedHandler = (context, ex) =>
                 {
+                    //var userService = context.GetService(typeof(UserService)) as UserService;
                     Console.WriteLine("【{0}】{1}:OUT", context.Channel.Path, context.User);
                 },
                 OnTextFrameReceivedHandler = (context, msg) =>
@@ -203,6 +204,7 @@ namespace ZeroWAS.App
                 },
                 OnDisconnectedHandler = (context, ex) =>
                 {
+                    //var userService = context.GetService(typeof(UserService)) as UserService;
                     Console.WriteLine("【{0}】{1}:OUT", context.Channel.Path, context.User);
                 },
                 OnReceivedHandler = (context, data) =>
