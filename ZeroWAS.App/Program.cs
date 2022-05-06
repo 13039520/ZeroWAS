@@ -11,7 +11,6 @@ namespace ZeroWAS.App
         static void Main(string[] args)
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
-
             if (ZeroWASInit())
             {
                 client = new RawSocket.Client(new Uri("http://127.0.0.1:6002/RawSocket?name=user009"));
@@ -52,16 +51,14 @@ namespace ZeroWAS.App
         }
         private static void ReadLine()
         {
-            Console.WriteLine("请输入要发送的文本：");
             string line = Console.ReadLine();
             if (!string.IsNullOrEmpty(line))
             {
                 if (client.IsConnencted)
                 {
-                    client.SendData(new RawSocket.DataFrame { FrameType = 1, FrameContent = new System.IO.MemoryStream(Encoding.UTF8.GetBytes(line)) });
+                    client.SendData(new RawSocket.DataFrame(line, 1));
                 }
             }
-            System.Threading.Thread.Sleep(2000);
             ReadLine();
         }
 

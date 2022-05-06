@@ -33,9 +33,25 @@ namespace ZeroWAS.RawSocket
         public byte FrameType { get; set; }
         private string _FrameRemark = string.Empty;
         public string FrameRemark { get { return _FrameRemark; } set { _FrameRemark = value; } }
-        public System.IO.Stream FrameContent { get; set; }
+        System.IO.Stream _FrameContent = null;
+        public System.IO.Stream FrameContent
+        {
+            get { return _FrameContent; }
+            set
+            {
+                if (_FrameContent != null) { _FrameContent.Close(); }
+                _FrameContent = value;
+            }
+        }
 
         public DataFrame() { }
+        public DataFrame(string content, byte type = 1) {
+            if (!string.IsNullOrEmpty(content))
+            {
+                this.FrameContent = new MemoryStream(Encoding.UTF8.GetBytes(content));
+            }
+            this.FrameType = type;
+        }
 
         private void Callback(DataFrameReadHandler handler, byte[] bytes, bool isEnd)
         {
@@ -216,15 +232,8 @@ namespace ZeroWAS.RawSocket
             }
             cacheDir = dir.FullName;
         }
-
-        /// <summary>
-        /// [对象方法]解包
-        /// </summary>
-        /// <param name="inputs"></param>
-        /// <returns></returns>
         public void Receive(byte[] inputs)
         {
-            //有缓存数据则联合缓存数据
             if (this._bytes.Count > 0)
             {
                 this._bytes.AddRange(inputs);
@@ -382,13 +391,10 @@ namespace ZeroWAS.RawSocket
                         this.currentDataFrame.FrameRemark = s;
                     }
                     OnReceived(this.currentDataFrame);
-                    this.currentDataFrame.Dispose();
-                    this.currentDataFrame = null;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
+                } catch { }
+
+                this.currentDataFrame.Dispose();
+                this.currentDataFrame = null;
             }
         }
         private void DataFrameDisposed(Guid guid)
