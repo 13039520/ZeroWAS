@@ -27,6 +27,13 @@ namespace ZeroWAS.App
                 Console.WriteLine("Startup failed");
             }
         }
+        static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            rawSocketClient?.Dispose();
+            webSocketClient?.Dispose();
+            webServer?.Dispose();
+        }
+
 
         static void RawSocketClientInit(int uid)
         {
@@ -111,12 +118,7 @@ namespace ZeroWAS.App
             WebSocketClientWriteLine();
         }
 
-        static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
-        {
-            rawSocketClient?.Dispose();
-            webSocketClient?.Dispose();
-            webServer?.Dispose();
-        }
+        
 
         static bool ZeroWASInit()
         {
