@@ -7,38 +7,16 @@ namespace ZeroWAS.App
     internal class Program
     {
         static ZeroWAS.IWebServer<string> webServer;
-        static ZeroWAS.RawSocket.Client client;
+        static ZeroWAS.RawSocket.Client rawSocketClient;
+        static ZeroWAS.WebSocket.Client webSocketClient;
         static void Main(string[] args)
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
             if (ZeroWASInit())
             {
-                client = new RawSocket.Client(new Uri("http://127.0.0.1:6002/RawSocket?name=user009"));
-                client.OnConnectErrorHandler = (e) => {
-                    Console.WriteLine(e.SocketException.Message);
-                    e.Retry = true;
-                };
-                client.OnConnectedHandler = () => {
-                    Console.WriteLine("Connected: ClientId=" + client.ClinetId);
-                    client.SendData(new RawSocket.DataFrame { 
-                        FrameType = 1, 
-                        FrameContent = new System.IO.MemoryStream(Encoding.UTF8.GetBytes("hello server!")) });
-                };
-                client.OnDisconnectHandler = (e) => {
-                    Console.WriteLine("Disconnect({0})", e.Message);
-                };
-                client.OnReceivedHandler = (e) => {
-                    if (e.FrameType == 1)
-                    {
-                        Console.WriteLine("Received: {0}", e.GetFrameContentString());
-                    }
-                    else
-                    {
-                        Console.WriteLine("Received: FrameType={0}&FrameContentLength={1}", e.FrameType, e.FrameContent.Length);
-                    }
-                };
-                client.Connect();
-                ReadLine();
+                RawSocketClientInit();
+                WebSocketClientInit();
+
                 while (true)
                 {
                     System.Threading.Thread.Sleep(1000);
@@ -49,17 +27,74 @@ namespace ZeroWAS.App
                 Console.WriteLine("Startup failed");
             }
         }
-        private static void ReadLine()
+        private static void RawSocketClientInit()
+        {
+            rawSocketClient = new RawSocket.Client(new Uri("http://127.0.0.1:6002/RawSocket?name=user009"));
+            rawSocketClient.OnConnectErrorHandler = (e) => {
+                Console.WriteLine(e.SocketException.Message);
+                e.Retry = true;
+            };
+            rawSocketClient.OnConnectedHandler = () => {
+                Console.WriteLine("RawSocketClient Connected: ClientId=" + rawSocketClient.ClinetId);
+                rawSocketClient.SendData(new RawSocket.DataFrame
+                {
+                    FrameType = 1,
+                    FrameContent = new System.IO.MemoryStream(Encoding.UTF8.GetBytes("hello server!"))
+                });
+            };
+            rawSocketClient.OnDisconnectHandler = (e) => {
+                Console.WriteLine("RawSocketClient Disconnect({0})", e.Message);
+            };
+            rawSocketClient.OnReceivedHandler = (e) => {
+                if (e.FrameType == 1)
+                {
+                    Console.WriteLine("RawSocketClient Received: {0}", e.GetFrameContentString());
+                }
+                else
+                {
+                    Console.WriteLine("RawSocketClient Received: FrameType={0}&FrameContentLength={1}", e.FrameType, e.FrameContent.Length);
+                }
+            };
+            rawSocketClient.Connect();
+        }
+        private static void WebSocketClientInit()
+        {
+            webSocketClient = new WebSocket.Client(new Uri("ws://127.0.0.1:6002/WebSocket?name=user008"));
+            webSocketClient.OnConnectErrorHandler = (e) => {
+                Console.WriteLine(e.SocketException.Message);
+                e.Retry = true;
+            };
+            webSocketClient.OnConnectedHandler = () => {
+                Console.WriteLine("WebSocketClient Connected: ClientId=" + webSocketClient.ClinetId);
+                webSocketClient.SendData(new WebSocket.DataFrame("hello server!"));
+            };
+            webSocketClient.OnDisconnectHandler = (e) => {
+                Console.WriteLine("WebSocketClient Disconnect({0})", e.Message);
+            };
+            webSocketClient.OnReceivedHandler = (e) => {
+                if (e.Header.OpCode == 1)
+                {
+                    Console.WriteLine("WebSocketClient Received: {0}", e.Text);
+                }
+                else
+                {
+                    Console.WriteLine("WebSocketClient Received: OpCode={0}&ContentLength={1}", e.Header.OpCode, e.Content.Length);
+                }
+            };
+            webSocketClient.Connect();
+            WebSocketClientWriteLine();
+        }
+        private static void WebSocketClientWriteLine()
         {
             string line = Console.ReadLine();
             if (!string.IsNullOrEmpty(line))
             {
-                if (client.IsConnencted)
+                if (webSocketClient.IsConnencted)
                 {
-                    client.SendData(new RawSocket.DataFrame(line, 1));
+                    webSocketClient.SendData(new WebSocket.DataFrame(line));
                 }
             }
-            ReadLine();
+            WebSocketClientWriteLine();
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)

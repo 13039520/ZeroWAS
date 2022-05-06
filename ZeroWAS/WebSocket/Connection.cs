@@ -302,6 +302,7 @@ namespace ZeroWAS.WebSocket
                     _SocketAccepter.User = wSAuthResult.User;
                     _SocketAccepter.WebSocketChannelPath = _Channel.Path;
                     _Context = new Context<TUser>(_Channel, HttpRequest, _SocketAccepter, HttpServer);
+                    _Context.SendData(string.Format("CLINETID={0}", _SocketAccepter.ClinetId), _SocketAccepter.User);
                     if (!string.IsNullOrEmpty(wSAuthResult.WriteMsg))
                     {
                         _Context.SendData(wSAuthResult.WriteMsg, _SocketAccepter.User);

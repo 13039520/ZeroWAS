@@ -30,7 +30,7 @@ namespace ZeroWAS.WebSocket
         /// <summary>
         /// 客户端标识编号(连接成功后才是有效编号)
         /// </summary>
-        public int ClinetId { get { return clinetId; } }
+        public long ClinetId { get { return clinetId; } }
         private string _SecWebSocketVersion = "13";
         private string _SecWebSocketKey = "";
         public string SecWebSocketVersion { get { return _SecWebSocketVersion; } }
@@ -49,7 +49,7 @@ namespace ZeroWAS.WebSocket
         bool noDelay = false;
         bool isDispose = false;
         bool isConnencted = false;
-        int clinetId = 0;
+        long clinetId = 0;
         System.Exception lastException = null;
         System.Uri TargetURI = null;
 
@@ -117,7 +117,7 @@ namespace ZeroWAS.WebSocket
             try
             {
                 socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
-                Console.WriteLine("连接：{0}:{1}", IPAddress, Port);
+                //Console.WriteLine("连接：{0}:{1}", IPAddress, Port);
                 var result = socket.BeginConnect(point, null, null);
                 bool success = result.AsyncWaitHandle.WaitOne(5000, true);
                 if (success)
@@ -207,14 +207,6 @@ namespace ZeroWAS.WebSocket
                     {
                         if (Handshaking(real, out overBytes))
                         {
-                            if (OnConnectedHandler != null)
-                            {
-                                try
-                                {
-                                    OnConnectedHandler();
-                                }
-                                catch { }
-                            }
                             isHandshaking = false;
                             continue;
                         }
@@ -241,8 +233,34 @@ namespace ZeroWAS.WebSocket
                 }
             }
         }
+        bool isFrist = true;
         private void DataFrameReceived(ReceivedResult result)
         {
+            if (isFrist)
+            {
+                isFrist = false;
+                bool flag = false;
+                if (result.Data != null && result.Data.Header.OpCode == 1)
+                {
+                    string s = result.Data.Text;
+                    if (s.StartsWith("CLINETID=") && s.Length > 9)//OK
+                    {
+                        flag = long.TryParse(s.Substring(9), out this.clinetId);
+                    }
+                }
+                if (OnConnectedHandler != null)
+                {
+                    try
+                    {
+                        OnConnectedHandler();
+                    }
+                    catch { }
+                }
+                if (flag)
+                {
+                    return;
+                }
+            }
             if (result.Data != null)
             {
                 if (result.Data.Header.OpCode == 8)
