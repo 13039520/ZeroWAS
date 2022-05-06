@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ZeroWAS" Version="1.0.0" />
+    <ProjectReference Include="..\ZeroWAS\ZeroWAS.csproj" />
   </ItemGroup>
 
 </Project>

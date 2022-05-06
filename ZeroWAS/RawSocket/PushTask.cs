@@ -6,10 +6,7 @@ namespace ZeroWAS.RawSocket
 {
     public class PushTask<TUser>
     {
-        /// <summary>
-        /// 下限21B,上限4M
-        /// </summary>
-        public byte[] Content { get; set; }
+        public IRawSocketData Content { get; set; }
         public IHttpConnection<TUser> Accepter { get; set; }
 
     }

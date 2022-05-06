@@ -13,5 +13,6 @@ namespace ZeroWAS.RawSocket
         public ConnectedHandler OnConnectedHandler { get; set; }
         public DisconnectedHandler OnDisconnectedHandler { get; set; }
         public ReceivedHandler OnReceivedHandler { get; set; }
+       
     }
 }

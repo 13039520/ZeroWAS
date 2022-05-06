@@ -27,7 +27,7 @@ namespace ZeroWAS.RawSocket
         private Handlers<TUser>.DisconnectedHandler _OnDisconnectedHandler;
         private Handlers<TUser>.ReceivedHandler _OnReceivedHandler;
         private bool _HasOnReceivedHandler = false;
-        private DataPacker packer;
+        private IDataFrameReceiver frameReceiver;
         private long rsClinetId = 0;
         private bool isDisconnected = false;
 
@@ -47,10 +47,10 @@ namespace ZeroWAS.RawSocket
                 _HasOnReceivedHandler = _OnReceivedHandler != null;
             }
             this.rsClinetId = socketAccepter.ClinetId;
-            packer = new DataPacker();
+            frameReceiver = new DataFrameReceiver();
+            frameReceiver.OnReceived += FrameReceiver_OnReceived;
             _SocketAccepter.OnDisposed += _SocketAccepter_OnDisposed;
         }
-
         private void _SocketAccepter_OnDisposed(System.Exception ex)
         {
             if (isDisconnected) { return; }
@@ -76,23 +76,22 @@ namespace ZeroWAS.RawSocket
         {
             try
             {
-                List<IRawSocketData> rs = packer.Decode(bytes);
-                if (rs.Count < 1) { return; }
-                foreach(IRawSocketData data in rs)
-                {
-                    if (_HasOnReceivedHandler)
-                    {
-                        try
-                        {
-                            _OnReceivedHandler(_Context, data);
-                        }
-                        catch { }
-                    }
-                }
+                frameReceiver.Receive(bytes);
             }
             catch(Exception ex)
             {
                 CloseSocket(ex);
+            }
+        }
+        private void FrameReceiver_OnReceived(IRawSocketData frame)
+        {
+            if (_HasOnReceivedHandler)
+            {
+                try
+                {
+                    _OnReceivedHandler(_Context, frame);
+                }
+                catch { }
             }
         }
         private void CloseSocket(Exception ex)
@@ -127,20 +126,28 @@ namespace ZeroWAS.RawSocket
                     bool hasWriteData = !string.IsNullOrEmpty(rSAuthResult.WriteData);
 
                     //握手完成：
-                    var handshakeCompleted= new Data { Type = 1, Content = new byte[] { 79, 75 } };//79,75=O,K=OK
+                    byte[] content = System.Text.Encoding.UTF8.GetBytes(string.Format("CLINETID={0}", _SocketAccepter.ClinetId));
                     if (!rSAuthResult.IsOk)
                     {
-                        handshakeCompleted.Content = System.Text.Encoding.UTF8.GetBytes(hasWriteData ? rSAuthResult.WriteData : "Authentication failed");
+                        content = System.Text.Encoding.UTF8.GetBytes(hasWriteData ? rSAuthResult.WriteData : "Authentication failed");
                     }
-                    var buffer = DataPacker.Encode(handshakeCompleted);
-                    _SocketAccepter.Write(buffer);
-
+                    using(var frame= new DataFrame { FrameType = 1, FrameContent = new System.IO.MemoryStream(content) })
+                    {
+                        frame.ReadAll(e => {
+                            _SocketAccepter.Write(e.Data);
+                        });
+                    }
                     if (rSAuthResult.IsOk)//通过验证
                     {
                         if (hasWriteData)
                         {
-                            buffer = DataPacker.Encode(new Data { Type = 1, Content = System.Text.Encoding.UTF8.GetBytes(rSAuthResult.WriteData) });
-                            _SocketAccepter.Write(buffer);
+                            content = System.Text.Encoding.UTF8.GetBytes(rSAuthResult.WriteData);
+                            using (var frame = new DataFrame { FrameType = 1, FrameContent = new System.IO.MemoryStream(content) })
+                            {
+                                frame.ReadAll(e => {
+                                    _SocketAccepter.Write(e.Data);
+                                });
+                            }
                         }
                     }
                     else//没有通过验证

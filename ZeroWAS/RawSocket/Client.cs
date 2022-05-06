@@ -29,7 +29,7 @@ namespace ZeroWAS.RawSocket
         /// <summary>
         /// 客户端标识编号(连接成功后才是有效编号)
         /// </summary>
-        public int ClinetId { get { return clinetId; } }
+        public long ClinetId { get { return clinetId; } }
 
 
         System.Net.IPAddress IPAddress = null;
@@ -39,7 +39,7 @@ namespace ZeroWAS.RawSocket
         bool noDelay = false;
         bool isDispose = false;
         bool isConnencted = false;
-        int clinetId = 0;
+        long clinetId = 0;
         System.Exception lastException = null;
         System.Uri TargetURI = null;
 
@@ -149,11 +149,14 @@ namespace ZeroWAS.RawSocket
                 }
             }
         }
+        bool isFirst = true;
+        bool hasOnReceivedHandler = false;
         void ReceiveData()
         {
-            DataPacker myDataUnpack = new DataPacker();
-            bool hasOnReceivedHandler = OnReceivedHandler != null;
-            bool isFirst = true;
+            IDataFrameReceiver receiver = new DataFrameReceiver();
+            receiver.OnReceived += Receiver_OnReceived;
+            hasOnReceivedHandler = OnReceivedHandler != null;
+            isFirst = true;
             int len = 2048;
             while (isConnencted)
             {
@@ -184,62 +187,52 @@ namespace ZeroWAS.RawSocket
                 {
                     real = buffer;
                 }
-                List<IRawSocketData> lis = myDataUnpack.Decode(real);
-                if (lis.Count < 1)
+                receiver.Receive(real);
+            }
+        }
+        private void Receiver_OnReceived(IRawSocketData frame)
+        {
+            if (isFirst)
+            {
+                isFirst = false;
+                if (frame.FrameType != 1)
                 {
-                    continue;
+                    lastException = new Exception("Handshake failed: Type(" + frame.FrameType + ")");
+                    Disconnect();
+                    frame.Dispose();
+                    return;
                 }
-                if (isFirst)
+                string s = frame.GetFrameContentString();
+                if (s.StartsWith("CLINETID=") && s.Length > 9)//OK
                 {
-                    isFirst = false;
-                    if (lis[0].Type != 1)
-                    {
-                        lastException = new Exception("Handshake failed: Type(" + lis[0].Type+")");
-                        Disconnect();
-                        break;
-                    }
-                    if (lis[0].Content.Length == 2 && lis[0].Content[0] == 79 && lis[0].Content[1] == 75)//OK
-                    {
-                        if (OnConnectedHandler != null)
-                        {
-                            try
-                            {
-                                OnConnectedHandler();
-                            }
-                            catch { }
-                        }
-                        lis.RemoveAt(0);
-                    }
-                    else
-                    {
-                        string msg = "";
-                        if(lis[0].Type == 1)
-                        {
-                            msg = System.Text.Encoding.UTF8.GetString(lis[0].Content);
-                        }
-                        else
-                        {
-                            msg = "Type(" + lis[0].Type + ")";
-                        }
-                        lastException = new Exception("Handshake failed: " + msg);
-                        Disconnect();
-                        break;
-                    }
-                }
-                if (hasOnReceivedHandler)
-                {
-                    foreach (IRawSocketData data in lis)
+                    long.TryParse(s.Substring(9), out this.clinetId);
+                    if (OnConnectedHandler != null)
                     {
                         try
                         {
-                            OnReceivedHandler(data);
+                            OnConnectedHandler();
                         }
                         catch { }
                     }
                 }
+                else
+                {
+                    lastException = new Exception("Handshake failed: " + s);
+                    Disconnect();
+                }
+                frame.Dispose();
+                return;
             }
+            if (hasOnReceivedHandler)
+            {
+                try
+                {
+                    OnReceivedHandler(frame);
+                }
+                catch { }
+            }
+            frame.Dispose();
         }
-
 
         private void HttpUpgrade()
         {
@@ -252,8 +245,13 @@ namespace ZeroWAS.RawSocket
         {
             if (IsConnencted)
             {
-                byte[] buffer = DataPacker.Encode(data);
-                socket.Send(buffer, buffer.Length, System.Net.Sockets.SocketFlags.None);
+                data.ReadAll(e => {
+                    socket.Send(e.Data, e.Data.Length, System.Net.Sockets.SocketFlags.None);
+                    if (e.IsEnd)
+                    {
+                        data.Dispose();
+                    }
+                });
                 return true;
             }
             return false;

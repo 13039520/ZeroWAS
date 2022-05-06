@@ -7,12 +7,39 @@ namespace ZeroWAS.App
     internal class Program
     {
         static ZeroWAS.IWebServer<string> webServer;
+        static ZeroWAS.RawSocket.Client client;
         static void Main(string[] args)
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
 
             if (ZeroWASInit())
             {
+                client = new RawSocket.Client(new Uri("http://127.0.0.1:6002/RawSocket?name=user009"));
+                client.OnConnectErrorHandler = (e) => {
+                    Console.WriteLine(e.SocketException.Message);
+                    e.Retry = true;
+                };
+                client.OnConnectedHandler = () => {
+                    Console.WriteLine("Connected: ClientId=" + client.ClinetId);
+                    client.SendData(new RawSocket.DataFrame { 
+                        FrameType = 1, 
+                        FrameContent = new System.IO.MemoryStream(Encoding.UTF8.GetBytes("hello server!")) });
+                };
+                client.OnDisconnectHandler = (e) => {
+                    Console.WriteLine("Disconnect({0})", e.Message);
+                };
+                client.OnReceivedHandler = (e) => {
+                    if (e.FrameType == 1)
+                    {
+                        Console.WriteLine("Received: {0}", e.GetFrameContentString());
+                    }
+                    else
+                    {
+                        Console.WriteLine("Received: FrameType={0}&FrameContentLength={1}", e.FrameType, e.FrameContent.Length);
+                    }
+                };
+                client.Connect();
+                ReadLine();
                 while (true)
                 {
                     System.Threading.Thread.Sleep(1000);
@@ -22,6 +49,20 @@ namespace ZeroWAS.App
             {
                 Console.WriteLine("Startup failed");
             }
+        }
+        private static void ReadLine()
+        {
+            Console.WriteLine("请输入要发送的文本：");
+            string line = Console.ReadLine();
+            if (!string.IsNullOrEmpty(line))
+            {
+                if (client.IsConnencted)
+                {
+                    client.SendData(new RawSocket.DataFrame { FrameType = 1, FrameContent = new System.IO.MemoryStream(Encoding.UTF8.GetBytes(line)) });
+                }
+            }
+            System.Threading.Thread.Sleep(2000);
+            ReadLine();
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
@@ -114,16 +155,16 @@ namespace ZeroWAS.App
                 OnReceivedHandler = (context, data) =>
                 {
                     string msg = "";
-                    if (data.Type == 1)
+                    if (data.FrameType == 1)
                     {
-                        msg = System.Text.Encoding.UTF8.GetString(data.Content);
+                        msg = data.GetFrameContentString();
                     }
                     else
                     {
-                        msg = "Type=" + data.Type + "&Length=" + data.Content.Length;
+                        msg = "Type=" + data.FrameType + "&Length=" + data.FrameContent.Length;
                     }
                     Console.WriteLine("【{0}】{1}:{2}", context.Channel.Path, context.User, msg);
-                    context.SendData(new ZeroWAS.RawSocket.Data { Type = 101, Id = data.Id });
+                    context.SendData(new ZeroWAS.RawSocket.DataFrame { FrameType = 101 });
                 }
             });
 
@@ -139,8 +180,8 @@ namespace ZeroWAS.App
             if (StartException == null)
             {
                 Console.WriteLine("Listen=>{0}:{1}", webServer.WebApp.ListenIP, webServer.WebApp.ListenPort);
-                Console.WriteLine("Open=>{0}", webServer.WebApp.HomePageUri);
-                OpenUrl(webServer.WebApp.HomePageUri.ToString());
+                //Console.WriteLine("Open=>{0}", webServer.WebApp.HomePageUri);
+                //OpenUrl(webServer.WebApp.HomePageUri.ToString());
                 return true;
             }
             else
