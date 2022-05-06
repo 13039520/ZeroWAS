@@ -27,7 +27,8 @@ namespace ZeroWAS.App
                 Console.WriteLine("Startup failed");
             }
         }
-        private static void RawSocketClientInit()
+
+        static void RawSocketClientInit()
         {
             rawSocketClient = new RawSocket.Client(new Uri("http://127.0.0.1:6002/RawSocket?name=user009"));
             rawSocketClient.OnConnectErrorHandler = (e) => {
@@ -56,8 +57,21 @@ namespace ZeroWAS.App
                 }
             };
             rawSocketClient.Connect();
+            //RawSocketClientWriteLine();
         }
-        private static void WebSocketClientInit()
+        static void RawSocketClientWriteLine()
+        {
+            string line = Console.ReadLine();
+            if (!string.IsNullOrEmpty(line))
+            {
+                if (rawSocketClient.IsConnencted)
+                {
+                    rawSocketClient.SendData(new RawSocket.DataFrame(line, 1));
+                }
+            }
+            RawSocketClientWriteLine();
+        }
+        static void WebSocketClientInit()
         {
             webSocketClient = new WebSocket.Client(new Uri("ws://127.0.0.1:6002/WebSocket?name=user008"));
             webSocketClient.OnConnectErrorHandler = (e) => {
@@ -84,7 +98,7 @@ namespace ZeroWAS.App
             webSocketClient.Connect();
             WebSocketClientWriteLine();
         }
-        private static void WebSocketClientWriteLine()
+        static void WebSocketClientWriteLine()
         {
             string line = Console.ReadLine();
             if (!string.IsNullOrEmpty(line))
@@ -97,8 +111,10 @@ namespace ZeroWAS.App
             WebSocketClientWriteLine();
         }
 
-        private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
+            rawSocketClient?.Dispose();
+            webSocketClient?.Dispose();
             webServer?.Dispose();
         }
 
@@ -116,7 +132,6 @@ namespace ZeroWAS.App
                 var res = context.Response;
                 res.StatusCode = ZeroWAS.Http.Status.Not_Found;
                 res.End();
-
             };
             /*result resport of HTTP request：*/
             webServer.WebApp.OnResponseEndHandler = (info) =>
