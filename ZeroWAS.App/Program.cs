@@ -14,8 +14,8 @@ namespace ZeroWAS.App
             Console.CancelKeyPress += Console_CancelKeyPress;
             if (ZeroWASInit())
             {
-                RawSocketClientInit();
-                WebSocketClientInit();
+                RawSocketClientInit(1);
+                WebSocketClientInit(5);
 
                 while (true)
                 {
@@ -28,9 +28,9 @@ namespace ZeroWAS.App
             }
         }
 
-        static void RawSocketClientInit()
+        static void RawSocketClientInit(int uid)
         {
-            rawSocketClient = new RawSocket.Client(new Uri("http://127.0.0.1:6002/RawSocket?name=user009"));
+            rawSocketClient = new RawSocket.Client(new Uri("http://127.0.0.1:6002/RawSocket?uid=" + uid));
             rawSocketClient.OnConnectErrorHandler = (e) => {
                 Console.WriteLine(e.SocketException.Message);
                 e.Retry = true;
@@ -71,9 +71,9 @@ namespace ZeroWAS.App
             }
             RawSocketClientWriteLine();
         }
-        static void WebSocketClientInit()
+        static void WebSocketClientInit(int uid)
         {
-            webSocketClient = new WebSocket.Client(new Uri("ws://127.0.0.1:6002/WebSocket?name=user008"));
+            webSocketClient = new WebSocket.Client(new Uri("ws://127.0.0.1:6002/WebSocket?uid=" + uid));
             webSocketClient.OnConnectErrorHandler = (e) => {
                 Console.WriteLine(e.SocketException.Message);
                 e.Retry = true;
@@ -123,15 +123,23 @@ namespace ZeroWAS.App
             /*site config：*/
             System.IO.FileInfo config = new System.IO.FileInfo(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "site.txt"));
             webServer = new ZeroWAS.WebServer<string>(1000, ZeroWAS.WebApplication.FromFile(config));
+            webServer.WebApp.AddService(typeof(UserService), new UserService());
 
             webServer.AddHttpHandler(new ZeroWAS.Http.StaticFileHandler(webServer.WebApp));
             /*http request with missing handler：*/
             webServer.WebApp.OnRequestReceivedHandler = (context) =>
             {
-                var req = context.Request;
-                var res = context.Response;
-                res.StatusCode = ZeroWAS.Http.Status.Not_Found;
-                res.End();
+                var userService = context.Server.GetService(typeof(UserService)) as UserService;
+                string userName = userService.GetUserNameByCookie(context.Request);
+                if (string.IsNullOrEmpty(userName))
+                {
+                    context.Response.StatusCode = Http.Status.Forbidden;
+                }
+                else
+                {
+                    context.Response.StatusCode = Http.Status.Not_Found;
+                }
+                context.Response.End();
             };
             /*result resport of HTTP request：*/
             webServer.WebApp.OnResponseEndHandler = (info) =>
@@ -152,13 +160,14 @@ namespace ZeroWAS.App
             {
                 OnConnectedHandler = (server, req, wsChannelPath) =>
                 {
-                    string user = req.QueryString != null ? req.QueryString["name"] : "";
-                    if (!string.IsNullOrEmpty(user) && user.Length < 30)
+                    var userService = server.GetService(typeof(UserService)) as UserService;
+                    string userName = userService.GetUserNameByQuery(req);
+                    if (string.IsNullOrEmpty(userName))
                     {
-                        Console.WriteLine("【{0}】{1}:ENTER", wsChannelPath, user);
-                        return new ZeroWAS.WebSocket.AuthResult<string> { IsOk = true, User = user, WriteMsg = "Welcome " + user };
+                        return new ZeroWAS.WebSocket.AuthResult<string> { IsOk = false, User = "", WriteMsg = "missing identity." };
                     }
-                    return new ZeroWAS.WebSocket.AuthResult<string> { IsOk = false, User = "", WriteMsg = "missing identity." };
+                    Console.WriteLine("【{0}】{1}:ENTER", wsChannelPath, userName);
+                    return new ZeroWAS.WebSocket.AuthResult<string> { IsOk = true, User = userName, WriteMsg = "Welcome " + userName };
                 },
                 OnDisconnectedHandler = (context, ex) =>
                 {
@@ -183,17 +192,14 @@ namespace ZeroWAS.App
             {
                 OnConnectedHandler = (server, req, wsChannelPath) =>
                 {
-                    string user = req.QueryString != null ? req.QueryString["name"] : "";
-                    if (!string.IsNullOrEmpty(user) && user.Length < 30)
+                    var userService = server.GetService(typeof(UserService)) as UserService;
+                    string userName = userService.GetUserNameByQuery(req);
+                    if (string.IsNullOrEmpty(userName))
                     {
-                        Console.WriteLine("【{0}】{1}:ENTER", wsChannelPath, user);
-                        if (user != "user001")
-                        {
-                            return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = true, User = user, WriteData = "Welcome to the chat room." };
-                        }
-                        return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = false, User = user, WriteData = "blacklisted." };
+                        return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = false, User = "", WriteData = "missing identity." };
                     }
-                    return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = false, User = "", WriteData = "missing identity." };
+                    Console.WriteLine("【{0}】{1}:ENTER", wsChannelPath, userName);
+                    return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = true, User = userName, WriteData = "Welcome to the chat room." };
                 },
                 OnDisconnectedHandler = (context, ex) =>
                 {
@@ -237,7 +243,6 @@ namespace ZeroWAS.App
                 return false;
             }
         }
-
         static void OpenUrl(string url)
         {
             try
@@ -252,6 +257,52 @@ namespace ZeroWAS.App
             catch (Exception e)
             {
                 Console.WriteLine("Error=>{0}",e.Message);
+            }
+        }
+
+        class UserService
+        {
+            class User { public int ID { get; set; } public string Name { get; set; } }
+            List<User> users = new List<User>(100);
+            public UserService()
+            {
+                for(int i = 1; i < 101; i++)
+                {
+                    string s = i.ToString();
+                    s = s.PadLeft(3, '0');
+                    string name = "user" + s;
+                    users.Add(new User { ID = i, Name = name });
+                }
+            }
+            public string GetUserNameByCookie(ZeroWAS.IHttpRequest req)
+            {
+                return GetUserNameByCookie(req, "uid");
+            }
+            public string GetUserNameByCookie(ZeroWAS.IHttpRequest req, string cookieName)
+            {
+                if (req.Cookies == null) { return string.Empty; }
+                var cookie = req.Cookies[cookieName];
+                if(string.IsNullOrEmpty(cookie)) { return string.Empty; }
+                int id;
+                if(!int.TryParse(cookie, out id)) { return string.Empty; }
+                var o=users.Find(x=>x.ID==id);
+                if (o != null) { return o.Name; }
+                return string.Empty;
+            }
+            public string GetUserNameByQuery(ZeroWAS.IHttpRequest req)
+            {
+                return GetUserNameByQuery(req, "uid");
+            }
+            public string GetUserNameByQuery(ZeroWAS.IHttpRequest req, string queryKey)
+            {
+                if (req.QueryString == null) { return string.Empty; }
+                var value = req.QueryString[queryKey];
+                if (string.IsNullOrEmpty(value)) { return string.Empty; }
+                int id;
+                if (!int.TryParse(value, out id)) { return string.Empty; }
+                var o = users.Find(x => x.ID == id);
+                if (o != null) { return o.Name; }
+                return string.Empty;
             }
         }
 
