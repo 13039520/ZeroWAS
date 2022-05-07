@@ -7,7 +7,13 @@
 		<PackageIcon>favicon.png</PackageIcon>
 		<ProduceReferenceAssembly>False</ProduceReferenceAssembly>
 		<Authors>ruzi</Authors>
+		<AssemblyVersion>3.8.4.0</AssemblyVersion>
+		<FileVersion>3.8.4.0</FileVersion>
+		<Version>3.8.4.0</Version>
+		<Description>A web application server written in C#, starting from .Net20, supports Http1.0/1.1, supports upgrading to WebSocket and Socket communication, so that traditional desktop applications can easily provide external data interaction interfaces</Description>
 		<PackageProjectUrl>https://github.com/13039520/ZeroWAS</PackageProjectUrl>
+		<PackageReleaseNotes></PackageReleaseNotes>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Include="favicon.png" Pack="true" PackagePath="" />
