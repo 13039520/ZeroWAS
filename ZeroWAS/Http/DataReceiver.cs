@@ -361,6 +361,8 @@ namespace ZeroWAS.Http
                         index += rLen;
                     }
                 }
+                //位置回退
+                stream.Position = 0;
                 //没有分隔符：当成一个name/value对进行解析并退出
                 if (boundaryIndex.Count < 1)
                 {
@@ -371,7 +373,6 @@ namespace ZeroWAS.Http
                     byte[] temp = new byte[streamLength];
                     stream.Read(temp, 0, temp.Length);
                     FormInputQuerySplitNameValue(temp, symbolBytes2);
-
                     return true;
                 }
                 //有分隔符则循环处理各个片段
