@@ -324,6 +324,7 @@ namespace ZeroWAS.Http
                 byte[] tempBytes = new byte[2097152];//2M
                 List<long> boundaryIndex = new List<long>();
                 long index = 0;
+                long requestContentLength = request.ContentLength;
                 long streamLength = stream.Length;
                 while (index < streamLength)
                 {
@@ -389,14 +390,15 @@ namespace ZeroWAS.Http
                 {
                     long frameLen = boundaryIndex[i + 1] - boundaryIndex[i];
                     long startIndex = boundaryIndex[i];
+                    if (frameLen + startIndex > streamLength)
+                    {
+                        frameLen = streamLength - startIndex;
+                    }
                     if (i > 0)
                     {
                         //忽略前置的'&'字符
                         startIndex += 1;
-                        if (i < limit - 1)
-                        {
-                            frameLen -= 1;
-                        }
+                        frameLen -= 1;
                     }
                     if (frameLen < 2)//至少两个字符，比如：a=
                     {
@@ -409,9 +411,11 @@ namespace ZeroWAS.Http
                     stream.Position = startIndex;
                     byte[] temp = new byte[frameLen];
                     stream.Read(temp, 0, temp.Length);
-
                     FormInputQuerySplitNameValue(temp, symbolBytes2);
                 }
+
+                //位置回退
+                stream.Position = 0;
             }
             catch (Exception ex)
             {
@@ -440,6 +444,7 @@ namespace ZeroWAS.Http
                 Array.Copy(frame, skipCount, val, 0, val.Length);
                 value = Utility.UrlDecode(val, request.Encoding);
             }
+            value = value.TrimEnd('\0');
             request.Form.Add(name, value);
             return true;
         }
