@@ -73,8 +73,15 @@ namespace ZeroWAS.Http
                 }
                 else
                 {
-                    reval.Add(37);//"%"
-                    reval.AddRange(_ByteToHexAsciiValue(bytes[n], useUppercaseHexadecimal));
+                    if (bytes[n] != 32)
+                    {
+                        reval.Add(37);//"%"
+                        reval.AddRange(_ByteToHexAsciiValue(bytes[n], useUppercaseHexadecimal));
+                    }
+                    else
+                    {
+                        reval.Add(43);//32(" ")替换为43("+")
+                    }
                 }
                 n++;
             }
@@ -84,7 +91,6 @@ namespace ZeroWAS.Http
         {
             List<byte> reval = new List<byte>();
             byte sVal = 37;//"%"
-            //byte sVal2 = 43;//"+"
             int n = 0;
             bool flag = false;
             while (n < bytes.Length)
@@ -102,15 +108,14 @@ namespace ZeroWAS.Http
                     }
                     else
                     {
-                        //if (bytes[n] != sVal2)
-                        //{
-                        //    reval.Add(bytes[n]);
-                        //}
-                        //else
-                        //{
-                        //    reval.Add(32);//43("+")替换为32(" ")
-                        //}
-                        reval.Add(bytes[n]);
+                        if (bytes[n] != 43)
+                        {
+                            reval.Add(bytes[n]);
+                        }
+                        else
+                        {
+                            reval.Add(32);//43("+")替换为32(" ")
+                        }
                     }
                 }
                 else
@@ -152,7 +157,7 @@ namespace ZeroWAS.Http
                 {
                     continue;
                 }
-                string name = frame.Substring(0, n);
+                string name = UrlDecode(frame.Substring(0, n), encoding);
                 string value = string.Empty;
                 if (n + 1 < frame.Length)
                 {

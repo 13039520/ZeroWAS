@@ -431,11 +431,13 @@ namespace ZeroWAS.Http
             {
                 return false;
             }
+            
             string name = request.Encoding.GetString(frame, 0, n).Trim();
             if (name.Length < 1)
             {
                 return false;
             }
+            name = Utility.UrlDecode(name, request.Encoding);
             string value = "";
             int skipCount = n + 1;
             if (skipCount < frame.Length)
@@ -567,7 +569,7 @@ namespace ZeroWAS.Http
                     {
                         throw new Exception("描述行错误");
                     }
-                    string fieldName = d.Groups["name"].Value;
+                    string fieldName = Utility.UrlDecode(d.Groups["name"].Value);
                     string fieldFileName = "";
                     bool isFileField = false;
                     d = System.Text.RegularExpressions.Regex.Match(disposition, @"filename=""(?<name>.+?)""");
@@ -723,7 +725,7 @@ namespace ZeroWAS.Http
                         }
                     }
                 }
-                string hostName = request.Header["HostName"];
+                string hostName = request.Header["Host"];
                 if (string.IsNullOrEmpty(hostName))
                 {
                     hostName = httpServer.HostName;
