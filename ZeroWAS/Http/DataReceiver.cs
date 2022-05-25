@@ -730,6 +730,12 @@ namespace ZeroWAS.Http
                 {
                     hostName = httpServer.HostName;
                 }
+                string userAgent = request.Header["User-Agent"];
+                if (string.IsNullOrEmpty(userAgent))
+                {
+                    userAgent = string.Format("None (FROM {0})", userRemoteAddress);
+                }
+                request.UserAgent = userAgent;
                 request.URI = new Uri(string.Format("{0}://{1}{2}", httpServer.UseHttps ? "https" : "http", hostName, request.Path));
             }
             catch { reval = false; }
