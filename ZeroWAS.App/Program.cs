@@ -37,7 +37,7 @@ namespace ZeroWAS.App
 
         static void RawSocketClientInit(int uid)
         {
-            rawSocketClient = new RawSocket.Client(new Uri("http://127.0.0.1:6002/RawSocket?uid=" + uid));
+            rawSocketClient = new RawSocket.Client(new Uri("http://127.0.0.1:6001/RawSocket?uid=" + uid));
             rawSocketClient.OnConnectErrorHandler = (e) => {
                 Console.WriteLine(e.SocketException.Message);
                 e.Retry = true;
@@ -60,7 +60,7 @@ namespace ZeroWAS.App
                 }
                 else
                 {
-                    Console.WriteLine("RawSocketClient Received: FrameType={0}&FrameContentLength={1}", e.FrameType, e.FrameContent.Length);
+                    Console.WriteLine("RawSocketClient Received: FrameType={0}&FrameContentLength={1}", e.FrameType, e.FrameContent?.Length);
                 }
             };
             rawSocketClient.Connect();
@@ -80,7 +80,7 @@ namespace ZeroWAS.App
         }
         static void WebSocketClientInit(int uid)
         {
-            webSocketClient = new WebSocket.Client(new Uri("ws://127.0.0.1:6002/WebSocket?uid=" + uid));
+            webSocketClient = new WebSocket.Client(new Uri("ws://127.0.0.1:6001/WebSocket?uid=" + uid));
             webSocketClient.OnConnectErrorHandler = (e) => {
                 Console.WriteLine(e.SocketException.Message);
                 e.Retry = true;
@@ -128,6 +128,7 @@ namespace ZeroWAS.App
             webServer.WebApp.AddService(typeof(UserService), new UserService());
 
             webServer.AddHttpHandler(new ZeroWAS.Http.StaticFileHandler(webServer.WebApp));
+            webServer.AddHttpHandler(new MyCrossOriginApi001Handler(webServer.WebApp));
             /*http request with missing handler：*/
             webServer.WebApp.OnRequestReceivedHandler = (context) =>
             {
@@ -239,6 +240,12 @@ namespace ZeroWAS.App
                 Console.WriteLine("Listen=>{0}:{1}", webServer.WebApp.ListenIP, webServer.WebApp.ListenPort);
                 //Console.WriteLine("Open=>{0}", webServer.WebApp.HomePageUri);
                 //OpenUrl(webServer.WebApp.HomePageUri.ToString());
+                Console.WriteLine("HostName=>{0}", webServer.WebApp.HostName);
+                Console.WriteLine("CrossOrigins=>");
+                foreach (var str in webServer.WebApp.CrossOrigins)
+                {
+                    Console.WriteLine(str);
+                }
                 return true;
             }
             else
@@ -308,6 +315,48 @@ namespace ZeroWAS.App
                 if (o != null) { return o.Name; }
                 return string.Empty;
             }
+        }
+
+        public class MyCrossOriginApi001Handler : Http.HttpHeadler
+        {
+            public MyCrossOriginApi001Handler(IWebApplication app) 
+                : base(app, "CrossOriginApi001", new string[] { ".api" }, new string[] { "/" })
+            {
+
+            }
+
+            public override void ProcessRequest(IHttpContext context)
+            {
+                string origin = context.Request.Header["origin"];
+                if (!string.IsNullOrEmpty(origin) && !origin.EndsWith(context.Server.HostName, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (context.Server.IsCrossOrigin(origin, StringComparison.OrdinalIgnoreCase))
+                    {
+                        context.Response.StatusCode = Http.Status.OK;
+                        context.Response.AddHeader("Access-Control-Allow-Origin", origin);
+                        context.Response.AddHeader("Access-Control-Allow-Methods", "*");
+                        context.Response.AddHeader("Access-Control-Allow-Headers", "*");
+                        
+                        if (context.Request.Method != "OPTIONS")
+                        {
+                            context.Response.AddHeader("Content-Type", "application/json;charset=utf-8");
+                            context.Response.Write(System.Text.Encoding.UTF8.GetBytes("{\"Message\":\"Welcome Cross Origin User\",\"Data\":[]}"));
+                        }
+                    }
+                    else
+                    {
+                        context.Response.StatusCode = Http.Status.Bad_Request;
+                    }
+                }
+                else
+                {
+                    context.Response.StatusCode = Http.Status.OK;
+                    context.Response.AddHeader("Content-Type", "application/json;charset=utf-8");
+                    context.Response.Write(System.Text.Encoding.UTF8.GetBytes("{\"Message\":\"Welcome\",\"Data\":[]}"));
+                }
+                context.Response.End();
+            }
+
         }
 
     }

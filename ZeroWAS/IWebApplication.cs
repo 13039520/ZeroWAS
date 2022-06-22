@@ -9,6 +9,7 @@ namespace ZeroWAS
         string ListenIP { get; }
         int ListenPort { get; }
         string HostName { get;  }
+        IEnumerable<string> CrossOrigins { get; }
         string PFXCertificateFilePath { get; }
         string PFXCertificatePassword { get; }
         System.Security.Cryptography.X509Certificates.X509Certificate2 X509Cer { get; }
@@ -29,6 +30,8 @@ namespace ZeroWAS
 
         Http.Handlers.RequestReceivedHandler OnRequestReceivedHandler { get; set; }
         Http.Handlers.ResponseEndHandler OnResponseEndHandler { get; set; }
+
+        bool IsCrossOrigin(string origin, StringComparison comparison);
 
         void AddService(Type serviceType, object serviceInstance);
         object GetService(Type serviceType);

@@ -1,5 +1,5 @@
 ListenIP=0.0.0.0
-ListenPort=6002
+ListenPort=6001
 //https(tls1.2)
 //PFXCertificateFilePath=@AppBaseDir/localhost.pfx
 //PFXCertificatePassword=12345
@@ -32,3 +32,8 @@ SiteMIME=.apk=application/octet-stream
 SiteMIME=.cur=image/x-icon
 SiteMIME=.m3u8=application/x-mpegURL
 SiteMIME=.ts=video/MP2T
+
+//
+CrossOrigin=http://localhost:6002
+CrossOrigin=http://127.0.0.1:6002
+CrossOrigin=http://192.168.10.254:6002

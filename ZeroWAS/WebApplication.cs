@@ -17,6 +17,7 @@ namespace ZeroWAS
         public string ListenIP { get; set; }
         public int ListenPort { get { return _ListenPort; } set { if (value > 0 && value < 65535) { _ListenPort = value; } } }
         public string HostName { get; set; }
+        public IEnumerable<string> CrossOrigins { get; set; }
         public string PFXCertificateFilePath { get; set; }
         public string PFXCertificatePassword { get; set; }
         public System.Security.Cryptography.X509Certificates.X509Certificate2 X509Cer
@@ -40,6 +41,18 @@ namespace ZeroWAS
 
         public Http.Handlers.RequestReceivedHandler OnRequestReceivedHandler { get; set; }
         public Http.Handlers.ResponseEndHandler OnResponseEndHandler { get; set; }
+
+        public bool IsCrossOrigin(string origin, StringComparison comparison)
+        {
+            foreach(string s in this.CrossOrigins)
+            {
+                if (s.Equals("*") || s.EndsWith(this.HostName) || string.Equals(origin, s, comparison))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         public WebApplication()
         {
@@ -219,6 +232,7 @@ namespace ZeroWAS
             List<string> SiteDefaultFile = new List<string>();
             System.IO.DirectoryInfo SiteHomeDirectory = null;
             List<System.IO.DirectoryInfo> SiteVirtualDirectory = new List<System.IO.DirectoryInfo>();
+            List<string> crossOrigins = new List<string>();
 
             using (var reader = file.OpenText())
             {
@@ -414,6 +428,23 @@ namespace ZeroWAS
                                     PFXCertificatePassword = value;
                                 }
                                 break;
+                            case "CrossOrigin":
+                                if (!string.IsNullOrEmpty(value))
+                                {
+                                    string[] ss = value.Split(new char[] {','}, StringSplitOptions.RemoveEmptyEntries);
+                                    foreach(var s in ss)
+                                    {
+                                        if (!System.Text.RegularExpressions.Regex.IsMatch(s, @"^(\*|[a-zA-Z0-9]{3,10}://[a-zA-Z0-9:\.]{5,})$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                        {
+                                            continue;
+                                        }
+                                        if (null == crossOrigins.Find(o => string.Equals(o, s, StringComparison.OrdinalIgnoreCase)))
+                                        {
+                                            crossOrigins.Add(s);
+                                        }
+                                    }
+                                }
+                                break;
                         }
 
                         line = reader.ReadLine();
@@ -450,26 +481,14 @@ namespace ZeroWAS
             {
                 reval.ListenPort = ListenPort;
             }
+            string _hostname = System.Net.Dns.GetHostName();
+            System.Net.IPAddress[] ipadrlist = System.Net.Dns.GetHostAddresses(_hostname);
             if (string.IsNullOrEmpty(HostName))
             {
+                HostName = ipIsLocalhostChars ? "localhost" : (reval.ListenIP != "0.0.0.0" ? reval.ListenIP : "127.0.0.1");
                 if (reval.ListenPort != 80)
                 {
-                    HostName = string.Format("{0}:{1}", ipIsLocalhostChars ? "localhost" : reval.ListenIP, reval.ListenPort);
-                }
-                else
-                {
-                    string name = System.Net.Dns.GetHostName();
-                    System.Net.IPAddress[] ipadrlist = System.Net.Dns.GetHostAddresses(name);
-                    string ip = "";
-                    foreach (System.Net.IPAddress ipa in ipadrlist)
-                    {
-                        if (ipa.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                        {
-                            ip = ipa.ToString();
-                            break;
-                        }
-                    }
-                    HostName = string.Format("{0}", ipIsLocalhostChars ? "localhost" : string.IsNullOrEmpty(ip) ? reval.ListenIP : ip);
+                    HostName += ":" + reval.ListenPort;
                 }
             }
             reval.HostName = HostName;
@@ -564,6 +583,42 @@ namespace ZeroWAS
                 }
             }
             reval.ResourceDirectory = dirs.ToArray();
+            if (crossOrigins.Contains("*"))
+            {
+                crossOrigins.Clear();
+                crossOrigins.Add("*");
+            }
+            else
+            {
+                string lastIpPort = "localhost" + (ListenPort != 80 ? ":" + ListenPort : "");
+                string origin = (reval.UseHttps ? "https" : "http") + "://"+ lastIpPort;
+                if (lastIpPort != HostName && null == crossOrigins.Find(o => string.Equals(o, origin, StringComparison.OrdinalIgnoreCase)))
+                {
+                    crossOrigins.Add(origin);
+                }
+                lastIpPort = "127.0.0.1" + (ListenPort != 80 ? ":" + ListenPort : "");
+                origin = (reval.UseHttps ? "https" : "http") + "://" + lastIpPort;
+                if (lastIpPort != HostName && null == crossOrigins.Find(o => string.Equals(o, origin, StringComparison.OrdinalIgnoreCase)))
+                {
+                    crossOrigins.Add(origin);
+                }
+                if (ListenIP == "0.0.0.0")
+                {
+                    foreach (System.Net.IPAddress ipa in ipadrlist)
+                    {
+                        if (ipa.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                        {
+                            lastIpPort = ipa.ToString() + (ListenPort != 80 ? ":" + ListenPort : "");
+                            origin = (reval.UseHttps ? "https" : "http") + "://" + lastIpPort;
+                            if (lastIpPort != HostName && null == crossOrigins.Find(o => string.Equals(o, origin, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                crossOrigins.Add(origin);
+                            }
+                        }
+                    }
+                }
+            }
+            reval.CrossOrigins = crossOrigins.ToArray();
 
             SetHomePageUrl(ref reval);
 
