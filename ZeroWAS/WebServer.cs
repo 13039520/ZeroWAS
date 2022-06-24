@@ -349,22 +349,47 @@ namespace ZeroWAS
                 //没有扩展名
                 if (!hasExtension)
                 {
-                    //只有一个结果
-                    if (count < 2) { return CheckHttpHandler(temp[0],suffix); }
-                    //返回订阅路径最少的接口对象
-                    int len = temp[0].BasePath.Length;
-                    int index3 = 0;
-                    for (int i = 1; i < count; i++)
+                    List<int> indexs = new List<int>(count);
+                    for(int i = 0; i < count; i++)
                     {
-                        int t = temp[i].BasePath.Length;
-                        if (t > len)
+                        bool exists = false;
+                        for (int j = 0; j < WebApp.SiteDefaultFile.Length; j++)
                         {
-                            continue;
+                            var handler = CheckHttpHandler(temp[i], System.IO.Path.GetExtension(WebApp.SiteDefaultFile[j]));
+                            if (handler != null)
+                            {
+                                exists = true;
+                                break;
+                            }
                         }
-                        index3 = i;
-                        len = t;
+                        if (exists)
+                        {
+                            indexs.Add(i);
+                        }
                     }
-                    return CheckHttpHandler(temp[index3],suffix);
+                    if (indexs.Count < 1)
+                    {
+                        return null;
+                    }
+                    else if (indexs.Count > 1)
+                    {
+                        int len = temp[indexs[0]].BasePath.Length;
+                        int index3 = 0;
+                        for (int i = 1; i < indexs.Count; i++)
+                        {
+                            int t = temp[indexs[i]].BasePath.Length;
+                            if (t < len)
+                            {
+                                index3 = i;
+                                len = t;
+                            }
+                        }
+                        return temp[indexs[index3]];
+                    }
+                    else
+                    {
+                        return temp[indexs[0]];
+                    }
                 }
                 //2.检查后缀名
                 index = count - 1;

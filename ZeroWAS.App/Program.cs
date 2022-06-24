@@ -16,7 +16,7 @@ namespace ZeroWAS.App
             {
                 RawSocketClientInit(1);
                 WebSocketClientInit(5);
-
+                Console.WriteLine("HostName=>{0}", webServer.WebApp.HostName);
                 while (true)
                 {
                     System.Threading.Thread.Sleep(1000);
@@ -37,7 +37,8 @@ namespace ZeroWAS.App
 
         static void RawSocketClientInit(int uid)
         {
-            rawSocketClient = new RawSocket.Client(new Uri("http://127.0.0.1:6001/RawSocket?uid=" + uid));
+            
+            rawSocketClient = new RawSocket.Client(new Uri("http://" + webServer.WebApp.HostName + "/RawSocket?uid=" + uid));
             rawSocketClient.OnConnectErrorHandler = (e) => {
                 Console.WriteLine(e.SocketException.Message);
                 e.Retry = true;
@@ -80,7 +81,7 @@ namespace ZeroWAS.App
         }
         static void WebSocketClientInit(int uid)
         {
-            webSocketClient = new WebSocket.Client(new Uri("ws://127.0.0.1:6001/WebSocket?uid=" + uid));
+            webSocketClient = new WebSocket.Client(new Uri("ws://" + webServer.WebApp.HostName + "/WebSocket?uid=" + uid));
             webSocketClient.OnConnectErrorHandler = (e) => {
                 Console.WriteLine(e.SocketException.Message);
                 e.Retry = true;
@@ -127,6 +128,7 @@ namespace ZeroWAS.App
             webServer = new ZeroWAS.WebServer<string>(1000, ZeroWAS.WebApplication.FromFile(config));
             webServer.WebApp.AddService(typeof(UserService), new UserService());
 
+            webServer.AddHttpHandler(new MyHtmlPageHandler(webServer.WebApp));
             webServer.AddHttpHandler(new ZeroWAS.Http.StaticFileHandler(webServer.WebApp));
             webServer.AddHttpHandler(new MyCrossOriginApi001Handler(webServer.WebApp));
             /*http request with missing handler：*/
@@ -355,6 +357,34 @@ namespace ZeroWAS.App
                     context.Response.Write(System.Text.Encoding.UTF8.GetBytes("{\"Message\":\"Welcome\",\"Data\":[]}"));
                 }
                 context.Response.End();
+            }
+
+        }
+
+        public class MyHtmlPageHandler : ZeroWAS.Http.HttpHeadler
+        {
+            public MyHtmlPageHandler(ZeroWAS.IWebApplication app)
+                : base(app, "HTMLPAGE", new string[] { ".html" }, new string[] { "/" })
+            {
+
+            }
+
+            public override void ProcessRequest(ZeroWAS.IHttpContext context)
+            {
+                string cookie = context.Request.Cookies["token"];
+                if (string.IsNullOrEmpty(cookie))
+                {
+                    string page = "/login.html";
+                    string localPath = context.Request.URI.LocalPath;
+                    if (!localPath.Equals(page, StringComparison.OrdinalIgnoreCase))
+                    {
+                        context.Response.StatusCode = ZeroWAS.Http.Status.Found;
+                        context.Response.Redirect(page + "?from=" + ZeroWAS.Http.Utility.UrlEncode(context.Request.URI.AbsoluteUri));
+                        //context.Response.End();
+                        return;
+                    }
+                }
+                base.ProcessRequest(context);
             }
 
         }
