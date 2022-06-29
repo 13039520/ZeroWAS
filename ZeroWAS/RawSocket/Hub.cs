@@ -226,5 +226,32 @@ namespace ZeroWAS.RawSocket
             }
         }
 
+
+        public void DisconnectedUsers(IRawSocketChannel<TUser> channel)
+        {
+            channel.DisconnectedUsers();
+        }
+        public void DisconnectedUser(TUser user)
+        {
+            lock (_channelsLock)
+            {
+                int count = channels.Count;
+                int index = 0;
+                while (index < count)
+                {
+                    try
+                    {
+                        channels[index].DisconnectedUser(user);
+                    }
+                    catch { }
+                    index++;
+                }
+            }
+        }
+        public void DisconnectedUser(TUser user, IRawSocketChannel<TUser> channel)
+        {
+            channel.DisconnectedUser(user);
+        }
+
     }
 }

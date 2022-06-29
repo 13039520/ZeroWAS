@@ -20,6 +20,8 @@ namespace ZeroWAS
         void SendToHub(IRawSocketData data, IRawSocketChannel<TUser> toChannel);
         void SendToHub(IRawSocketData data, IRawSocketChannel<TUser> toChannel, TUser toUser);
 
+        void DisconnectedUsers();
+        void DisconnectedUser(TUser user);
 
     }
 }

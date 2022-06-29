@@ -15,7 +15,7 @@ namespace ZeroWAS.App
             if (ZeroWASInit())
             {
                 RawSocketClientInit(1);
-                WebSocketClientInit(5);
+                //WebSocketClientInit(5);
                 Console.WriteLine("HostName=>{0}", webServer.WebApp.HostName);
                 while (true)
                 {
@@ -65,7 +65,7 @@ namespace ZeroWAS.App
                 }
             };
             rawSocketClient.Connect();
-            //RawSocketClientWriteLine();
+            RawSocketClientWriteLine();
         }
         static void RawSocketClientWriteLine()
         {

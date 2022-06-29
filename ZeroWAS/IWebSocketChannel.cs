@@ -38,6 +38,8 @@ namespace ZeroWAS
         void SendControlFrameToHub(WebSocket.ControlOpcodeEnum opcode, IWebSocketChannel<TUser> toChannel);
         void SendControlFrameToHub(WebSocket.ControlOpcodeEnum opcode, IWebSocketChannel<TUser> toChannel, TUser toUser);
 
+        void DisconnectedUsers();
+        void DisconnectedUser(TUser user);
 
     }
 }

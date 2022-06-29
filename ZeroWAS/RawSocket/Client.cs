@@ -187,7 +187,16 @@ namespace ZeroWAS.RawSocket
                 {
                     real = buffer;
                 }
-                receiver.Receive(real);
+                try
+                {
+                    receiver.Receive(real);
+                }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                    Disconnect();
+                    break;
+                }
             }
         }
         private void Receiver_OnReceived(IRawSocketData frame)

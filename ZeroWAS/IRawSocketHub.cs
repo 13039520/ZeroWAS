@@ -18,6 +18,9 @@ namespace ZeroWAS
         void SendData(IRawSocketData data, IRawSocketChannel<TUser> toWSChannel);
         void SendData(IRawSocketData data, IRawSocketChannel<TUser> toWSChannel, TUser toWSUser);
 
+        void DisconnectedUsers(IRawSocketChannel<TUser> channel);
+        void DisconnectedUser(TUser user);
+        void DisconnectedUser(TUser user, IRawSocketChannel<TUser> channel);
 
     }
 }

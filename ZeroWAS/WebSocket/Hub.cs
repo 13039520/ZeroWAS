@@ -440,5 +440,31 @@ namespace ZeroWAS.WebSocket
             }
         }
 
+        public void DisconnectedUsers(IWebSocketChannel<TUser> channel)
+        {
+            channel.DisconnectedUsers();
+        }
+        public void DisconnectedUser(TUser user)
+        {
+            lock (_channelsLock)
+            {
+                int count = channels.Count;
+                int index = 0;
+                while (index < count)
+                {
+                    try
+                    {
+                        channels[index].DisconnectedUser(user);
+                    }
+                    catch { }
+                    index++;
+                }
+            }
+        }
+        public void DisconnectedUser(TUser user, IWebSocketChannel<TUser> channel)
+        {
+            channel.DisconnectedUser(user);
+        }
+
     }
 }

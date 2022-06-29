@@ -58,5 +58,46 @@ namespace ZeroWAS.RawSocket
             hub.SendData(data, toChannel, toUser);
         }
 
+
+
+        public void DisconnectedUsers()
+        {
+            List<IHttpConnection<TUser>> users = new List<IHttpConnection<TUser>>();
+            Common.SocketManager<TUser>.ForeachRS(new Common.SocketManager<TUser>.ForeachHeadler((accepter) => {
+                if (accepter.RawSocketChannelPath == this.Path)
+                {
+                    users.Add(accepter);
+                }
+                return true;//继续
+            }));
+            foreach(var u in users)
+            {
+                try
+                {
+                    u.Dispose();
+                }
+                catch { }
+            }
+        }
+        public void DisconnectedUser(TUser user)
+        {
+            List<IHttpConnection<TUser>> users = new List<IHttpConnection<TUser>>();
+            Common.SocketManager<TUser>.ForeachRS(new Common.SocketManager<TUser>.ForeachHeadler((accepter) => {
+                if (accepter.User.Equals(user) && accepter.RawSocketChannelPath == this.Path)
+                {
+                    users.Add(accepter);
+                }
+                return true;//继续
+            }));
+            foreach (var u in users)
+            {
+                try
+                {
+                    u.Dispose();
+                }
+                catch { }
+            }
+        }
+
     }
 }
