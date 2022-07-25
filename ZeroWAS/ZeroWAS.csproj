@@ -7,9 +7,9 @@
 		<PackageIcon>favicon.png</PackageIcon>
 		<ProduceReferenceAssembly>False</ProduceReferenceAssembly>
 		<Authors>ruzi</Authors>
-		<AssemblyVersion>1.0.7.0</AssemblyVersion>
-		<FileVersion>1.0.7.0</FileVersion>
-		<Version>1.0.7.0</Version>
+		<AssemblyVersion>1.0.8.0</AssemblyVersion>
+		<FileVersion>1.0.8.0</FileVersion>
+		<Version>1.0.8.0</Version>
 		<Description>A web application server written in C#, starting from .Net20, supports Http1.0/1.1, supports upgrading to WebSocket and Socket communication, so that traditional desktop applications can easily provide external data interaction interfaces</Description>
 		<PackageProjectUrl>https://github.com/13039520/ZeroWAS</PackageProjectUrl>
 		<PackageReleaseNotes>Add disconnected interface for websocket and socket</PackageReleaseNotes>

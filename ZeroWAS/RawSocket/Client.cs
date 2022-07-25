@@ -55,23 +55,30 @@ namespace ZeroWAS.RawSocket
             {
                 throw new ArgumentException("uri");
             }
-            var IPHostEntry = System.Net.Dns.GetHostEntry(host);
-            if(IPHostEntry==null|| IPHostEntry.AddressList==null|| IPHostEntry.AddressList.Length < 1)
+            if (System.Text.RegularExpressions.Regex.IsMatch(host, @"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$"))
             {
-                throw new ArgumentException("uri");
+                IPAddress = System.Net.IPAddress.Parse(host);
             }
-            foreach(var addr in IPHostEntry.AddressList)
+            else
             {
-                if (addr.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
+                var IPHostEntry = System.Net.Dns.GetHostEntry(host);
+                if (IPHostEntry == null || IPHostEntry.AddressList == null || IPHostEntry.AddressList.Length < 1)
                 {
-                    continue;
+                    throw new ArgumentException("uri");
                 }
-                IPAddress = addr;
-                break;
-            }
-            if (IPAddress == null)
-            {
-                throw new ArgumentException("uri");
+                foreach (var addr in IPHostEntry.AddressList)
+                {
+                    if (addr.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
+                    {
+                        continue;
+                    }
+                    IPAddress = addr;
+                    break;
+                }
+                if (IPAddress == null)
+                {
+                    throw new ArgumentException("uri");
+                }
             }
 
             Port = uri.Port;

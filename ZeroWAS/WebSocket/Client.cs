@@ -79,29 +79,36 @@ namespace ZeroWAS.WebSocket
             {
                 throw new ArgumentException("uri");
             }
+            if (System.Text.RegularExpressions.Regex.IsMatch(host, @"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$"))
+            {
+                IPAddress = System.Net.IPAddress.Parse(host);
+            }
+            else
+            {
+                var IPHostEntry = System.Net.Dns.GetHostEntry(host);
+                if (IPHostEntry == null || IPHostEntry.AddressList == null || IPHostEntry.AddressList.Length < 1)
+                {
+                    throw new ArgumentException("uri");
+                }
+                foreach (var addr in IPHostEntry.AddressList)
+                {
+                    if (addr.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
+                    {
+                        continue;
+                    }
+                    IPAddress = addr;
+                    break;
+                }
+                if (IPAddress == null)
+                {
+                    throw new ArgumentException("uri");
+                }
+            }
             if (uri.Scheme != "ws" && uri.Scheme != "wss")
             {
                 throw new ArgumentException("uri");
             }
             useSSL = uri.Scheme == "wss";
-            var IPHostEntry = System.Net.Dns.GetHostEntry(host);
-            if(IPHostEntry==null|| IPHostEntry.AddressList==null|| IPHostEntry.AddressList.Length < 1)
-            {
-                throw new ArgumentException("uri");
-            }
-            foreach(var addr in IPHostEntry.AddressList)
-            {
-                if (addr.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
-                {
-                    continue;
-                }
-                IPAddress = addr;
-                break;
-            }
-            if (IPAddress == null)
-            {
-                throw new ArgumentException("uri");
-            }
 
             Port = uri.Port;
 
