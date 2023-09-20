@@ -1,5 +1,5 @@
 ListenIP=0.0.0.0
-ListenPort=6003
+ListenPort=6005
 //https(tls1.2)
 //PFXCertificateFilePath=@AppBaseDir/localhost.pfx
 //PFXCertificatePassword=12345
@@ -18,13 +18,11 @@ HttpMaxContentLength=419430400
 SiteStaticFileSuffix=.html .xml .htm .css .js .txt .csv
 SiteStaticFileSuffix=.zip .rar
 SiteStaticFileSuffix=.ico .jpg .jpeg .png .gif .webp .svg .psd .ai .cdr .tiff .eps .epsf
-SiteStaticFileSuffix=.m3u8 .ts
+SiteStaticFileSuffix=.m3u8 .ts .mp4 .glb
 
 SiteDefaultFile=Index.html Index.htm Default.html Default.htm
 
 SiteHomeDirectory=D:\Work\ZeroUI\wwwroot
-SiteVirtualDirectory=D:\testFiles
-SiteVirtualDirectory=E:\videos
 
 //MIME Type
 SiteMIME=.7z=application/octet-stream
@@ -32,6 +30,7 @@ SiteMIME=.apk=application/octet-stream
 SiteMIME=.cur=image/x-icon
 SiteMIME=.m3u8=application/x-mpegURL
 SiteMIME=.ts=video/MP2T
+SiteMIME=.glb=model/gltf-binary
 
 //
 CrossOrigin=http://localhost:6002

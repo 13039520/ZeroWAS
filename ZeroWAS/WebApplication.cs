@@ -141,7 +141,7 @@ namespace ZeroWAS
             {
                 for (int i = 1; i < dirs.Length; i++)
                 {
-                    if (dirs[i].Name.Equals(uriFirstMenu))
+                    if (dirs[i].Name.Equals(uriFirstMenu, StringComparison.OrdinalIgnoreCase))
                     {
                         exists = true;
                         reval = System.IO.Path.Combine(dirs[i].FullName, vPath.Substring(charIndex + 1));
@@ -233,7 +233,6 @@ namespace ZeroWAS
             System.IO.DirectoryInfo SiteHomeDirectory = null;
             List<System.IO.DirectoryInfo> SiteVirtualDirectory = new List<System.IO.DirectoryInfo>();
             List<string> crossOrigins = new List<string>();
-
             using (var reader = file.OpenText())
             {
                 try

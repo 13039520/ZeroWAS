@@ -17,7 +17,7 @@ namespace ZeroWAS.RawSocket
         public IHttpRequest UpgradeInfo { get { return _UpgradeInfo; } }
         public TUser User { get { return _User; } }
         public IRawSocketChannel<TUser> Channel { get { return _Channel; } }
-        public IWebApplication Server { get; }
+        public IWebApplication Server { get { return _Server; } }
 
         public object GetService(Type serviceType)
         {

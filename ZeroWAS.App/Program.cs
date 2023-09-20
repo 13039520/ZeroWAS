@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Text;
+using System.Threading;
 
 namespace ZeroWAS.App
 {
@@ -9,6 +11,7 @@ namespace ZeroWAS.App
         static ZeroWAS.IWebServer<string> webServer;
         static ZeroWAS.RawSocket.Client rawSocketClient;
         static ZeroWAS.WebSocket.Client webSocketClient;
+        static System.Threading.Timer timer;
         static void Main(string[] args)
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
@@ -34,10 +37,9 @@ namespace ZeroWAS.App
             webServer?.Dispose();
         }
 
-
+        static bool isRawSocketClientInit = false;
         static void RawSocketClientInit(int uid)
         {
-            
             rawSocketClient = new RawSocket.Client(new Uri("http://" + webServer.WebApp.HostName + "/RawSocket?uid=" + uid));
             rawSocketClient.OnConnectErrorHandler = (e) => {
                 Console.WriteLine(e.SocketException.Message);
@@ -125,10 +127,10 @@ namespace ZeroWAS.App
         {
             /*site config：*/
             System.IO.FileInfo config = new System.IO.FileInfo(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "site.txt"));
-            webServer = new ZeroWAS.WebServer<string>(1000, ZeroWAS.WebApplication.FromFile(config));
+            webServer = new ZeroWAS.WebServer<string>(3000, ZeroWAS.WebApplication.FromFile(config));
             webServer.WebApp.AddService(typeof(UserService), new UserService());
 
-            webServer.AddHttpHandler(new MyHtmlPageHandler(webServer.WebApp));
+            //webServer.AddHttpHandler(new MyHtmlPageHandler(webServer.WebApp));
             webServer.AddHttpHandler(new ZeroWAS.Http.StaticFileHandler(webServer.WebApp));
             webServer.AddHttpHandler(new MyCrossOriginApi001Handler(webServer.WebApp));
             /*http request with missing handler：*/
@@ -286,6 +288,7 @@ namespace ZeroWAS.App
                     string name = "user" + s;
                     users.Add(new User { ID = i, Name = name });
                 }
+                users.Add(new User { ID = 999999, Name = "Unity3DWorld" });
             }
             public string GetUserNameByCookie(ZeroWAS.IHttpRequest req)
             {
