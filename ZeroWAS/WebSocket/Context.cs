@@ -32,53 +32,21 @@ namespace ZeroWAS.WebSocket
             _Server = server;
         }
 
-        public void SendData(string message)
+        public void SendData(IWebSocketDataFrame frame)
         {
-            Channel.AddPushTask(new PushTask<TUser> { Content = Encoding.UTF8.GetBytes(message), ContentType = ContentOpcodeEnum.Text, Accepter = _Accepter });
+            Channel.AddPushTask(new PushTask<TUser> { Frame = frame, Accepter = _Accepter });
         }
-        public void SendData(string message, TUser toUser)
+        public void SendData(IWebSocketDataFrame frame, TUser toUser)
         {
-            Channel.SendToCurrentChannel(message, toUser);
+            Channel.SendToCurrentChannel(frame, toUser);
         }
-        public void SendData(string message, IWebSocketChannel<TUser> toChannel)
+        public void SendData(IWebSocketDataFrame frame, IWebSocketChannel<TUser> toChannel)
         {
-            Channel.SendToHub(message, toChannel);
+            Channel.SendToHub(frame, toChannel);
         }
-        public void SendData(string message, IWebSocketChannel<TUser> toChannel, TUser toUser)
+        public void SendData(IWebSocketDataFrame frame, IWebSocketChannel<TUser> toChannel, TUser toUser)
         {
-            Channel.SendToHub(message, toChannel, toUser);
-        }
-        public void SendControlFrame(ControlOpcodeEnum opcode)
-        {
-            Channel.SendControlFrameToCurrentChannel(opcode);
-        }
-        public void SendControlFrame(ControlOpcodeEnum opcode, TUser toWSUser)
-        {
-            Channel.SendControlFrameToCurrentChannel(opcode, toWSUser);
-        }
-        public void SendControlFrame(ControlOpcodeEnum opcode, IWebSocketChannel<TUser> toChannel)
-        {
-            Channel.SendControlFrameToHub(opcode, toChannel);
-        }
-        public void SendControlFrame(ControlOpcodeEnum opcode, IWebSocketChannel<TUser> toChannel, TUser toUser)
-        {
-            Channel.SendControlFrameToHub(opcode, toChannel, toUser);
-        }
-        public void SendBinaryData(byte[] binaryData)
-        {
-            Channel.SendBinaryDataToCurrentChannel(binaryData);
-        }
-        public void SendBinaryData(byte[] binaryData, TUser toWSUser)
-        {
-            Channel.SendBinaryDataToCurrentChannel(binaryData, toWSUser);
-        }
-        public void SendBinaryData(byte[] binaryData, IWebSocketChannel<TUser> toChannel)
-        {
-            Channel.SendBinaryDataToHub(binaryData, toChannel);
-        }
-        public void SendBinaryData(byte[] binaryData, IWebSocketChannel<TUser> toChannel, TUser toUser)
-        {
-            Channel.SendBinaryDataToHub(binaryData, toChannel, toUser);
+            Channel.SendToHub(frame, toChannel, toUser);
         }
         public void Disconnected()
         {

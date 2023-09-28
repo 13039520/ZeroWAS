@@ -17,8 +17,8 @@ namespace ZeroWAS.App
             Console.CancelKeyPress += Console_CancelKeyPress;
             if (ZeroWASInit())
             {
-                RawSocketClientInit(1);
-                //WebSocketClientInit(5);
+                //RawSocketClientInit(1);
+                WebSocketClientInit(5);
                 Console.WriteLine("HostName=>{0}", webServer.WebApp.HostName);
                 while (true)
                 {
@@ -171,20 +171,19 @@ namespace ZeroWAS.App
                     string userName = userService.GetUserNameByQuery(req);
                     if (string.IsNullOrEmpty(userName))
                     {
-                        return new ZeroWAS.WebSocket.AuthResult<string> { IsOk = false, User = "", WriteMsg = "missing identity." };
+                        return new ZeroWAS.WebSocket.AuthResult<string> { IsOk = false, User = "", Content = Encoding.UTF8.GetBytes("missing identity."), ContentOpcode = WebSocket.ContentOpcodeEnum.Text };
                     }
                     Console.WriteLine("【{0}】{1}:ENTER", wsChannelPath, userName);
-                    return new ZeroWAS.WebSocket.AuthResult<string> { IsOk = true, User = userName, WriteMsg = "Welcome " + userName };
+                    return new ZeroWAS.WebSocket.AuthResult<string> { IsOk = true, User = userName, Content = Encoding.UTF8.GetBytes("Welcome " + userName), ContentOpcode = WebSocket.ContentOpcodeEnum.Text };
                 },
                 OnDisconnectedHandler = (context, ex) =>
                 {
-                    //var userService = context.GetService(typeof(UserService)) as UserService;
                     Console.WriteLine("【{0}】{1}:OUT", context.Channel.Path, context.User);
                 },
                 OnTextFrameReceivedHandler = (context, msg) =>
                 {
                     string rMsg = string.Format("【{0}】{1}", context.User, msg);
-                    context.SendData(rMsg, context.Channel);
+                    context.SendData(new WebSocket.DataFrame(Encoding.UTF8.GetBytes(rMsg), WebSocket.ContentOpcodeEnum.Text), context.Channel);
                     Console.WriteLine("【{0}】{1}", context.Channel.Path, rMsg);
                 },
                 OnBinaryFrameReceivedHandler = (context, content) =>
@@ -204,10 +203,10 @@ namespace ZeroWAS.App
                     string userName = userService.GetUserNameByQuery(req);
                     if (string.IsNullOrEmpty(userName))
                     {
-                        return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = false, User = "", WriteData = "missing identity." };
+                        return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = false, User = "", FrameContent = null, FrameType = 1, FrameRemark = "missing identity." };
                     }
                     Console.WriteLine("【{0}】{1}:ENTER", wsChannelPath, userName);
-                    return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = true, User = userName, WriteData = "Welcome to the chat room." };
+                    return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = true, User = userName, FrameContent = null, FrameType = 1, FrameRemark = "Welcome to the chat room." };
                 },
                 OnDisconnectedHandler = (context, ex) =>
                 {

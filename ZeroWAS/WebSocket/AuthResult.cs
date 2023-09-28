@@ -8,6 +8,8 @@ namespace ZeroWAS.WebSocket
     {
         public bool IsOk { get; set; }
         public TUser User { get; set; }
-        public string WriteMsg { get; set; }
+        private ContentOpcodeEnum _ContentOpcode = ContentOpcodeEnum.Text;
+        public ContentOpcodeEnum ContentOpcode { get { return _ContentOpcode; } set { _ContentOpcode = value; } }
+        public byte[] Content { get; set; }
     }
 }

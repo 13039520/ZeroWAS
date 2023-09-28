@@ -74,7 +74,7 @@ namespace ZeroWAS.WebSocket
             }
         }
 
-        public void SendData(string message)
+        public void SendData(IWebSocketDataFrame frame)
         {
             lock (_channelsLock)
             {
@@ -84,14 +84,14 @@ namespace ZeroWAS.WebSocket
                 {
                     try
                     {
-                        channels[index].SendToCurrentChannel(message);
+                        channels[index].SendToCurrentChannel(frame);
                     }
                     catch { }
                     index++;
                 }
             }
         }
-        public void SendData(string message, TUser toUser)
+        public void SendData(IWebSocketDataFrame frame, TUser toUser)
         {
             lock (_channelsLock)
             {
@@ -101,36 +101,14 @@ namespace ZeroWAS.WebSocket
                 {
                     try
                     {
-                        channels[index].SendToCurrentChannel(message, toUser);
+                        channels[index].SendToCurrentChannel(frame, toUser);
                     }
                     catch { }
                     index++;
                 }
             }
         }
-        public void SendData(string message, TUser toUser, IWebSocketChannel<TUser> toChannel)
-        {
-            if (toChannel == null) { return; }
-            lock (_channelsLock)
-            {
-                int count = channels.Count;
-                int index = 0;
-                while (index < count)
-                {
-                    try
-                    {
-                        if (channels[index] == toChannel)
-                        {
-                            channels[index].SendToCurrentChannel(message, toUser);
-                            return;
-                        }
-                    }
-                    catch { }
-                    index++;
-                }
-            }
-        }
-        public void SendData(string message, IWebSocketChannel<TUser> toChannel)
+        public void SendData(IWebSocketDataFrame frame, TUser toUser, IWebSocketChannel<TUser> toChannel)
         {
             if (toChannel == null) { return; }
             lock (_channelsLock)
@@ -143,7 +121,7 @@ namespace ZeroWAS.WebSocket
                     {
                         if (channels[index] == toChannel)
                         {
-                            channels[index].SendToCurrentChannel(message);
+                            channels[index].SendToCurrentChannel(frame, toUser);
                             return;
                         }
                     }
@@ -152,7 +130,7 @@ namespace ZeroWAS.WebSocket
                 }
             }
         }
-        public void SendData(string message, IWebSocketChannel<TUser> toChannel, TUser toUser)
+        public void SendData(IWebSocketDataFrame frame, IWebSocketChannel<TUser> toChannel)
         {
             if (toChannel == null) { return; }
             lock (_channelsLock)
@@ -165,7 +143,7 @@ namespace ZeroWAS.WebSocket
                     {
                         if (channels[index] == toChannel)
                         {
-                            channels[index].SendToCurrentChannel(message, toUser);
+                            channels[index].SendToCurrentChannel(frame);
                             return;
                         }
                     }
@@ -174,43 +152,7 @@ namespace ZeroWAS.WebSocket
                 }
             }
         }
-
-
-        public void SendBinaryData(byte[] binaryData)
-        {
-            lock (_channelsLock)
-            {
-                int count = channels.Count;
-                int index = 0;
-                while (index < count)
-                {
-                    try
-                    {
-                        channels[index].SendBinaryDataToCurrentChannel(binaryData);
-                    }
-                    catch { }
-                    index++;
-                }
-            }
-        }
-        public void SendBinaryData(byte[] binaryData, TUser toUser)
-        {
-            lock (_channelsLock)
-            {
-                int count = channels.Count;
-                int index = 0;
-                while (index < count)
-                {
-                    try
-                    {
-                        channels[index].SendBinaryDataToCurrentChannel(binaryData, toUser);
-                    }
-                    catch { }
-                    index++;
-                }
-            }
-        }
-        public void SendBinaryData(byte[] binaryData, TUser toUser, IWebSocketChannel<TUser> toChannel)
+        public void SendData(IWebSocketDataFrame frame, IWebSocketChannel<TUser> toChannel, TUser toUser)
         {
             if (toChannel == null) { return; }
             lock (_channelsLock)
@@ -223,7 +165,7 @@ namespace ZeroWAS.WebSocket
                     {
                         if (channels[index] == toChannel)
                         {
-                            channels[index].SendBinaryDataToCurrentChannel(binaryData, toUser);
+                            channels[index].SendToCurrentChannel(frame, toUser);
                             return;
                         }
                     }
@@ -232,153 +174,6 @@ namespace ZeroWAS.WebSocket
                 }
             }
         }
-        public void SendBinaryData(byte[] binaryData, IWebSocketChannel<TUser> toChannel)
-        {
-            if (toChannel == null) { return; }
-            lock (_channelsLock)
-            {
-                int count = channels.Count;
-                int index = 0;
-                while (index < count)
-                {
-                    try
-                    {
-                        if (channels[index] == toChannel)
-                        {
-                            channels[index].SendBinaryDataToCurrentChannel(binaryData);
-                            return;
-                        }
-                    }
-                    catch { }
-                    index++;
-                }
-            }
-        }
-        public void SendBinaryData(byte[] binaryData, IWebSocketChannel<TUser> toChannel, TUser toUser)
-        {
-            if (toChannel == null) { return; }
-            lock (_channelsLock)
-            {
-                int count = channels.Count;
-                int index = 0;
-                while (index < count)
-                {
-                    try
-                    {
-                        if (channels[index] == toChannel)
-                        {
-                            channels[index].SendBinaryDataToCurrentChannel(binaryData, toUser);
-                            return;
-                        }
-                    }
-                    catch { }
-                    index++;
-                }
-            }
-        }
-
-        public void SendControlFrame(ControlOpcodeEnum opcode)
-        {
-            lock (_channelsLock)
-            {
-                int count = channels.Count;
-                int index = 0;
-                while (index < count)
-                {
-                    try
-                    {
-                        channels[index].SendControlFrameToCurrentChannel(opcode);
-                    }
-                    catch { }
-                    index++;
-                }
-            }
-        }
-        public void SendControlFrame(ControlOpcodeEnum opcode, TUser toUser)
-        {
-            lock (_channelsLock)
-            {
-                int count = channels.Count;
-                int index = 0;
-                while (index < count)
-                {
-                    try
-                    {
-                        channels[index].SendControlFrameToCurrentChannel(opcode, toUser);
-                    }
-                    catch { }
-                    index++;
-                }
-            }
-        }
-        public void SendControlFrame(ControlOpcodeEnum opcode, TUser toUser, IWebSocketChannel<TUser> toChannel)
-        {
-            if (toChannel == null) { return; }
-            lock (_channelsLock)
-            {
-                int count = channels.Count;
-                int index = 0;
-                while (index < count)
-                {
-                    try
-                    {
-                        if (channels[index] == toChannel)
-                        {
-                            channels[index].SendControlFrameToCurrentChannel(opcode, toUser);
-                            return;
-                        }
-                    }
-                    catch { }
-                    index++;
-                }
-            }
-        }
-        public void SendControlFrame(ControlOpcodeEnum opcode, IWebSocketChannel<TUser> toChannel)
-        {
-            if (toChannel == null) { return; }
-            lock (_channelsLock)
-            {
-                int count = channels.Count;
-                int index = 0;
-                while (index < count)
-                {
-                    try
-                    {
-                        if (channels[index] == toChannel)
-                        {
-                            channels[index].SendControlFrameToCurrentChannel(opcode);
-                            return;
-                        }
-                    }
-                    catch { }
-                    index++;
-                }
-            }
-        }
-        public void SendControlFrame(ControlOpcodeEnum opcode, IWebSocketChannel<TUser> toChannel, TUser toUser)
-        {
-            if (toChannel == null) { return; }
-            lock (_channelsLock)
-            {
-                int count = channels.Count;
-                int index = 0;
-                while (index < count)
-                {
-                    try
-                    {
-                        if (channels[index] == toChannel)
-                        {
-                            channels[index].SendControlFrameToCurrentChannel(opcode, toUser);
-                            return;
-                        }
-                    }
-                    catch { }
-                    index++;
-                }
-            }
-        }
-
-
 
         private void BeginSendThread()
         {
@@ -423,14 +218,13 @@ namespace ZeroWAS.WebSocket
             {
                 if (task.Accepter.IsDataMasked)
                 {
-                    DataFrame df = new DataFrame(task.Content,task.ContentType);
-                    task.Accepter.Write(df.GetBytes());
+                    task.Accepter.Write(task.Frame.GetBytes());
                 }
                 else
                 {
                     System.Collections.Generic.List<byte> buffer = new System.Collections.Generic.List<byte>();
                     buffer.Add(0);//开始符
-                    buffer.AddRange(task.Content);
+                    buffer.AddRange(task.Frame.GetBytes());
                     buffer.Add(255);//结束符
                     task.Accepter.Write(buffer.ToArray());
                 }

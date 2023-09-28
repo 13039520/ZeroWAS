@@ -20,7 +20,7 @@ namespace ZeroWAS.WebSocket
         }
         public delegate void ConnectErrorHandler(ConnectErrorEventArgs e);
         public delegate void ConnectedHandler();
-        public delegate void ReceivedHandler(DataFrame data);
+        public delegate void ReceivedHandler(IWebSocketDataFrame data);
         public delegate void DisconnectHandler(Exception ex);
 
         public ConnectErrorHandler OnConnectErrorHandler { get; set; }
@@ -447,7 +447,7 @@ namespace ZeroWAS.WebSocket
             sslStream.Write(buffer);
 
         }
-        public bool SendData(DataFrame data)
+        public bool SendData(IWebSocketDataFrame data)
         {
             if (IsConnencted)
             {

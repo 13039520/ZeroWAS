@@ -8,6 +8,8 @@ namespace ZeroWAS.RawSocket
     {
         public bool IsOk { get; set; }
         public TUser User { get; set; }
-        public string WriteData { get; set; }
+        public byte FrameType { get; set; }
+        public byte[] FrameContent { get; set; }
+        public string FrameRemark { get; set; }
     }
 }

@@ -111,17 +111,17 @@ namespace ZeroWAS.WebSocket
             if (result.Data != null)
             {
                 string messageReceived = string.Empty;
-                DataFrame dr = result.Data;
+                IWebSocketDataFrame dr = result.Data;
                 try
                 {
                     switch (dr.Header.OpCode)
                     {
                         case 8://close
-                            _Context.SendControlFrame(ControlOpcodeEnum.Close);
+                            _Context.SendData(new DataFrame(ControlOpcodeEnum.Close));
                             CloseSocket(new Exception("正常断开"));
                             break;
                         case 9://ping
-                            _Context.SendControlFrame(ControlOpcodeEnum.Pong);
+                            _Context.SendData(new DataFrame(ControlOpcodeEnum.Ping));
                             Console.WriteLine("Received=>Ping");
                             break;
                         case 10://pong
@@ -299,18 +299,16 @@ namespace ZeroWAS.WebSocket
                     {
                         throw new Exception("Authentication failed");
                     }
+                    IWebSocketDataFrame frame = new DataFrame(wSAuthResult.Content, wSAuthResult.ContentOpcode);
                     _SocketAccepter.User = wSAuthResult.User;
                     _SocketAccepter.WebSocketChannelPath = _Channel.Path;
                     _Context = new Context<TUser>(_Channel, HttpRequest, _SocketAccepter, HttpServer);
-                    _Context.SendData(string.Format("CLINETID={0}", _SocketAccepter.ClinetId), _SocketAccepter.User);
-                    if (!string.IsNullOrEmpty(wSAuthResult.WriteMsg))
-                    {
-                        _Context.SendData(wSAuthResult.WriteMsg, _SocketAccepter.User);
-                    }
+                    _Context.SendData(frame, _SocketAccepter.User);
                     if (!wSAuthResult.IsOk)
                     {
                         System.Threading.Thread.Sleep(200);
-                        throw new Exception(string.IsNullOrEmpty(wSAuthResult.WriteMsg) ? "Authentication failed" : wSAuthResult.WriteMsg);
+                        string s = frame.Text;
+                        throw new Exception(string.IsNullOrEmpty(s) ? "Authentication failed" : s);
                     }
                 }
                 catch(Exception ex)

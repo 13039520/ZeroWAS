@@ -176,7 +176,7 @@ namespace ZeroWAS.WebSocket
 
     public class ReceivedResult
     {
-        public DataFrame Data { get; set; }
+        public IWebSocketDataFrame Data { get; set; }
         public string ErrorMessage { get; set; }
     }
 

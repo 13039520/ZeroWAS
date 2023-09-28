@@ -18,7 +18,7 @@ namespace ZeroWAS.WebSocket
         Ping = 9,
         Pong = 10
     }
-    public class DataFrame
+    public class DataFrame: IWebSocketDataFrame
     {
         DataFrameHeader _header;
         private byte[] _extend = new byte[0];

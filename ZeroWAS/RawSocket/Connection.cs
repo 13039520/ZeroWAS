@@ -123,37 +123,36 @@ namespace ZeroWAS.RawSocket
                     _SocketAccepter.User = rSAuthResult.User;
                     _SocketAccepter.RawSocketChannelPath = _Channel.Path;
                     _Context = new Context<TUser>(_Channel, HttpRequest, _SocketAccepter, HttpServer);
-                    bool hasWriteData = !string.IsNullOrEmpty(rSAuthResult.WriteData);
-
-                    //握手完成：
-                    byte[] content = System.Text.Encoding.UTF8.GetBytes(string.Format("CLINETID={0}", _SocketAccepter.ClinetId));
-                    if (!rSAuthResult.IsOk)
+                    bool hasFrameContent = rSAuthResult.FrameContent != null && rSAuthResult.FrameContent.Length > 0;
+                    bool hasFrameRemark=!string.IsNullOrEmpty(rSAuthResult.FrameRemark);
+                    System.IO.MemoryStream content = null;
+                    if(rSAuthResult.FrameContent != null && rSAuthResult.FrameContent.Length > 0)
                     {
-                        content = System.Text.Encoding.UTF8.GetBytes(hasWriteData ? rSAuthResult.WriteData : "Authentication failed");
+                        content = new System.IO.MemoryStream(rSAuthResult.FrameContent);
                     }
-                    using(var frame= new DataFrame { FrameType = 1, FrameContent = new System.IO.MemoryStream(content) })
+                    string remark = string.Empty;
+                    if(!string.IsNullOrEmpty(rSAuthResult.FrameRemark))
+                    {
+                        remark = rSAuthResult.FrameRemark;
+                    }
+                    if(string.IsNullOrEmpty(remark))
+                    {
+                        if (!rSAuthResult.IsOk)
+                        {
+                            remark = "Authentication failed";
+                        }
+                    }
+                    //握手完成：
+                    using(var frame= new DataFrame { FrameType = rSAuthResult.FrameType, FrameContent = content, FrameRemark= remark })
                     {
                         frame.ReadAll(e => {
                             _SocketAccepter.Write(e.Data);
                         });
                     }
-                    if (rSAuthResult.IsOk)//通过验证
-                    {
-                        if (hasWriteData)
-                        {
-                            content = System.Text.Encoding.UTF8.GetBytes(rSAuthResult.WriteData);
-                            using (var frame = new DataFrame { FrameType = 1, FrameContent = new System.IO.MemoryStream(content) })
-                            {
-                                frame.ReadAll(e => {
-                                    _SocketAccepter.Write(e.Data);
-                                });
-                            }
-                        }
-                    }
-                    else//没有通过验证
+                    if (!rSAuthResult.IsOk)//没有通过验证
                     {
                         System.Threading.Thread.Sleep(200);
-                        throw new Exception(string.IsNullOrEmpty(rSAuthResult.WriteData) ? "Authentication failed" : rSAuthResult.WriteData);
+                        throw new Exception(remark);//抛出异常触发连接的断开
                     }
                 }
                 catch (Exception ex)
