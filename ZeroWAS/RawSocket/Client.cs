@@ -211,33 +211,14 @@ namespace ZeroWAS.RawSocket
             if (isFirst)
             {
                 isFirst = false;
-                if (frame.FrameType != 1)
+                if (OnConnectedHandler != null)
                 {
-                    lastException = new Exception("Handshake failed: Type(" + frame.FrameType + ")");
-                    Disconnect();
-                    frame.Dispose();
-                    return;
-                }
-                string s = frame.GetFrameContentString();
-                if (s.StartsWith("CLINETID=") && s.Length > 9)//OK
-                {
-                    long.TryParse(s.Substring(9), out this.clinetId);
-                    if (OnConnectedHandler != null)
+                    try
                     {
-                        try
-                        {
-                            OnConnectedHandler();
-                        }
-                        catch { }
+                        OnConnectedHandler();
                     }
+                    catch { }
                 }
-                else
-                {
-                    lastException = new Exception("Handshake failed: " + s);
-                    Disconnect();
-                }
-                frame.Dispose();
-                return;
             }
             if (hasOnReceivedHandler)
             {

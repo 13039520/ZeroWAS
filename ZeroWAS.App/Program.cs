@@ -18,7 +18,7 @@ namespace ZeroWAS.App
             if (ZeroWASInit())
             {
                 //RawSocketClientInit(1);
-                WebSocketClientInit(5);
+                //WebSocketClientInit(5);
                 Console.WriteLine("HostName=>{0}", webServer.WebApp.HostName);
                 while (true)
                 {
@@ -131,8 +131,8 @@ namespace ZeroWAS.App
             webServer.WebApp.AddService(typeof(UserService), new UserService());
 
             //webServer.AddHttpHandler(new MyHtmlPageHandler(webServer.WebApp));
-            webServer.AddHttpHandler(new ZeroWAS.Http.StaticFileHandler(webServer.WebApp));
-            webServer.AddHttpHandler(new MyCrossOriginApi001Handler(webServer.WebApp));
+            //webServer.AddHttpHandler(new ZeroWAS.Http.StaticFileHandler(webServer.WebApp));
+            //webServer.AddHttpHandler(new MyCrossOriginApi001Handler(webServer.WebApp));
             /*http request with missing handler：*/
             webServer.WebApp.OnRequestReceivedHandler = (context) =>
             {
@@ -197,7 +197,7 @@ namespace ZeroWAS.App
             });
             webServer.RawSocketHub.ChannelAdd("/RawSocket", new ZeroWAS.RawSocket.Handlers<string>
             {
-                OnConnectedHandler = (server, req, wsChannelPath) =>
+                OnConnectedHandler = (server, req, wsChannelPath, clientId) =>
                 {
                     var userService = server.GetService(typeof(UserService)) as UserService;
                     string userName = userService.GetUserNameByQuery(req);
@@ -287,7 +287,7 @@ namespace ZeroWAS.App
                     string name = "user" + s;
                     users.Add(new User { ID = i, Name = name });
                 }
-                users.Add(new User { ID = 999999, Name = "Unity3DWorld" });
+                users.Add(new User { ID = 999999, Name = "999999" });
             }
             public string GetUserNameByCookie(ZeroWAS.IHttpRequest req)
             {
@@ -390,6 +390,7 @@ namespace ZeroWAS.App
             }
 
         }
+
 
     }
 }

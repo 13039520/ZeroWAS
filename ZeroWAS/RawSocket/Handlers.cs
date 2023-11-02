@@ -6,7 +6,7 @@ namespace ZeroWAS.RawSocket
 {
     public class Handlers<TUser>: IRawSocketHandlers<TUser>
     {
-        public delegate AuthResult<TUser> ConnectedHandler(IWebApplication server, IHttpRequest req, string channelPath);
+        public delegate AuthResult<TUser> ConnectedHandler(IWebApplication server, IHttpRequest req, string channelPath, long clientId);
         public delegate void DisconnectedHandler(IRawSocketContext<TUser> context, Exception ex);
         public delegate void ReceivedHandler(IRawSocketContext<TUser> context, IRawSocketData data);
 

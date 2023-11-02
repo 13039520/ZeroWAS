@@ -9,14 +9,15 @@ namespace ZeroWAS
 
         bool HasChannel { get; }
         bool ChannelAdd(string path, IRawSocketHandlers<TUser> handler);
-        IRawSocketChannel<TUser> ChannelSerach(string wsPath);
+        bool ChannelRemove(string path);
+        IRawSocketChannel<TUser> ChannelSerach(string rsPath);
         void AddPushTask(RawSocket.PushTask<TUser> task);
 
         void SendData(IRawSocketData data);
-        void SendData(IRawSocketData data, TUser toWSUser);
-        void SendData(IRawSocketData data, TUser toWSUser, IRawSocketChannel<TUser> toWSChannel);
-        void SendData(IRawSocketData data, IRawSocketChannel<TUser> toWSChannel);
-        void SendData(IRawSocketData data, IRawSocketChannel<TUser> toWSChannel, TUser toWSUser);
+        void SendData(IRawSocketData data, TUser toUser);
+        void SendData(IRawSocketData data, TUser toUser, IRawSocketChannel<TUser> toChannel);
+        void SendData(IRawSocketData data, IRawSocketChannel<TUser> toChannel);
+        void SendData(IRawSocketData data, IRawSocketChannel<TUser> toChannel, TUser toUser);
 
         void DisconnectedUsers(IRawSocketChannel<TUser> channel);
         void DisconnectedUser(TUser user);

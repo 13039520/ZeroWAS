@@ -42,6 +42,37 @@ namespace ZeroWAS.RawSocket
                 return true;
             }
         }
+        public bool ChannelRemove(string path)
+        {
+            if (string.IsNullOrEmpty(path) || path[0] != '/') { return false; }
+            IRawSocketChannel<TUser> channel = null;
+            bool hasIndex = false;
+            lock (_channelsLock)
+            {
+                int count = channels.Count;
+                int index = 0;
+                while (index < count)
+                {
+                    if (string.Equals(path, channels[index].Path, StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasIndex = true;
+                        break;
+                    }
+                    index++;
+                }
+                if (hasIndex)
+                {
+                    channel = channels[index];
+                    channels.RemoveAt(index);
+                }
+            }
+            if (!hasIndex) { return false; }
+            if (channel != null)
+            {
+                channel.DisconnectedUsers();
+            }
+            return true;
+        }
         public IRawSocketChannel<TUser> ChannelSerach(string path)
         {
             if (!string.IsNullOrEmpty(path))

@@ -9,6 +9,7 @@ namespace ZeroWAS
 
         bool HasChannel { get; }
         bool ChannelAdd(string path, IWebSocketHandlers<TUser> handler);
+        bool ChannelRemove(string path);
         IWebSocketChannel<TUser> ChannelSerach(string wsPath);
         void AddPushTask(WebSocket.PushTask<TUser> task);
 

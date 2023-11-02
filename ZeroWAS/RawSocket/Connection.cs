@@ -115,7 +115,7 @@ namespace ZeroWAS.RawSocket
             {
                 try
                 {
-                    AuthResult<TUser> rSAuthResult = _OnConnectedHandler(HttpServer, HttpRequest, _Channel.Path);
+                    AuthResult<TUser> rSAuthResult = _OnConnectedHandler(HttpServer, HttpRequest, _Channel.Path, rsClinetId);
                     if (rSAuthResult == null)
                     {
                         throw new Exception("Authentication failed");
