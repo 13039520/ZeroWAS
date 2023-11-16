@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 
 namespace ZeroWAS.WebSocket
 {
-    public class Client
+    public class Client: IDisposable
     {
         public class ConnectErrorEventArgs : EventArgs
         {

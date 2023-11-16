@@ -27,6 +27,7 @@ namespace ZeroWAS.WebSocket
                     {
                         return false;
                     }
+                    index++;
                 }
                 Channel<TUser> channel = new Channel<TUser>(path, this);
                 if (handler != null)

@@ -27,6 +27,7 @@ namespace ZeroWAS.RawSocket
                     {
                         return false;
                     }
+                    index++;
                 }
                 Channel<TUser> channel = new Channel<TUser>(path, this);
                 if (handlers != null)

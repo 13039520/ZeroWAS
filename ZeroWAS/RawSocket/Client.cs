@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ZeroWAS.RawSocket
 {
-    public class Client
+    public class Client : IDisposable
     {
         public class ConnectErrorEventArgs : EventArgs
         {
@@ -37,7 +37,7 @@ namespace ZeroWAS.RawSocket
         System.Net.IPEndPoint point = null;
         System.Net.Sockets.Socket socket = null;
         bool noDelay = false;
-        bool isDispose = false;
+        bool isDisposed = false;
         bool isConnencted = false;
         long clinetId = 0;
         System.Exception lastException = null;
@@ -88,10 +88,11 @@ namespace ZeroWAS.RawSocket
             TargetURI = uri;
         }
 
-        void _connect(bool reConnect = false)
+        void _connect()
         {
-            if (isConnencted) { return; }
-
+        Conn:
+            if (isConnencted || isDisposed) { return; }
+            Exception error = null;
             try
             {
                 socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
@@ -120,16 +121,20 @@ namespace ZeroWAS.RawSocket
             }
             catch (Exception ex)
             {
+                error = ex;
+            }
+            if (error != null)
+            {
                 isConnencted = false;
+                bool retry = false;
                 if (OnConnectErrorHandler != null)
                 {
-                    bool retry = false;
                     try
                     {
                         System.Net.Sockets.SocketException socketException;
-                        if (ex is System.Net.Sockets.SocketException)
+                        if (error is System.Net.Sockets.SocketException)
                         {
-                            socketException = ex as System.Net.Sockets.SocketException;
+                            socketException = error as System.Net.Sockets.SocketException;
                         }
                         else
                         {
@@ -141,19 +146,14 @@ namespace ZeroWAS.RawSocket
                         retry = exception.Retry;
                     }
                     catch { }
-
-                    if (retry)
-                    {
-                        System.Threading.Thread.Sleep(2000);
-                        _connect(true);//重试
-                    }
-                    else
-                    {
-                        lastException = new Exception("连接失败后放弃重试");
-                        Disconnect();
-                        return;
-                    }
                 }
+                if (retry)
+                {
+                    System.Threading.Thread.Sleep(2000);
+                    goto Conn;
+                }
+                lastException = new Exception("连接失败后放弃重试");
+                Disconnect();
             }
         }
         bool isFirst = true;
@@ -233,7 +233,7 @@ namespace ZeroWAS.RawSocket
 
         private void HttpUpgrade()
         {
-            string data = "GET "+ TargetURI.PathAndQuery + " HTTP/1.1\r\n"
+            string data = "GET " + TargetURI.PathAndQuery + " HTTP/1.1\r\n"
                 + "Upgrade:rawsocket\r\n\r\n";
             byte[] buffer = System.Text.Encoding.UTF8.GetBytes(data);
             socket.Send(buffer, buffer.Length, System.Net.Sockets.SocketFlags.None);
@@ -279,8 +279,8 @@ namespace ZeroWAS.RawSocket
         }
         protected void Dispose(bool dispoing)
         {
-            if (isDispose) { return; }
-            isDispose = true;
+            if (isDisposed) { return; }
+            isDisposed = true;
             isConnencted = false;
             clinetId = 0;
             if (dispoing)
