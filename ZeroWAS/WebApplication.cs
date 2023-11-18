@@ -322,7 +322,7 @@ namespace ZeroWAS
                                 }
                                 else
                                 {
-                                    value = value.Substring(11);
+                                    value = value.Substring(12);
                                     if (value.Length > 0)
                                     {
                                         value = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, value);
@@ -357,7 +357,7 @@ namespace ZeroWAS
                                 }
                                 else
                                 {
-                                    value = value.Substring(11);
+                                    value = value.Substring(12);
                                     if (value.Length > 0)
                                     {
                                         value = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, value);
