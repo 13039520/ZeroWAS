@@ -248,10 +248,9 @@ namespace ZeroWAS.RawSocket
         {
             try
             {
-                task.Content.ReadAll(e => {
+                task.Content.ReadAll((e) => {
                     task.Accepter.Write(e.Data);
                 });
-                task.Content.Dispose();
             }
             catch(Exception ex) {
                 Console.WriteLine("【RawSocket发送时异常】Message={0}&TargetSite={1}&StackTrace=\r\n{2}", ex.Message, ex.TargetSite, ex.StackTrace);

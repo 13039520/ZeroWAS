@@ -25,6 +25,17 @@ namespace ZeroWAS.RawSocket
         event DataFrameReceivedHandler OnReceived;
         void Receive(byte[] input);
     }
+    public class DataFrameInfo
+    {
+        public ushort RemarkLength { get; }
+        public long ContentLength { get; }
+        public long FrameLength { get; }
+        public byte FrameType { get; }
+        public DataFrameInfo(DataFrame d)
+        {
+
+        }
+    }
     public class DataFrame : IRawSocketData
     {
         private Guid _Handler = Guid.NewGuid();
@@ -32,7 +43,21 @@ namespace ZeroWAS.RawSocket
         public event DataFrameDisposedHandler OnDisposed = null;
         public byte FrameType { get; set; }
         private string _FrameRemark = string.Empty;
-        public string FrameRemark { get { return _FrameRemark; } set { _FrameRemark = value; } }
+        private byte[] _FrameRemarkBytes = new byte[0];
+        public string FrameRemark { get { return _FrameRemark; } 
+            set
+            {
+                _FrameRemark = value;
+                if (string.IsNullOrEmpty(_FrameRemark))
+                {
+                    _FrameRemarkBytes = new byte[0];
+                }
+                else
+                {
+                    _FrameRemarkBytes = System.Text.Encoding.UTF8.GetBytes(FrameRemark);
+                }
+            } 
+        }
         System.IO.Stream _FrameContent = null;
         public System.IO.Stream FrameContent
         {
@@ -59,17 +84,37 @@ namespace ZeroWAS.RawSocket
         }
         private byte[] GetHead(long contentLen)
         {
-            byte[] remark = FrameRemark.Length > 0 ? System.Text.Encoding.UTF8.GetBytes(FrameRemark) : new byte[0];
-            if (remark.Length > ushort.MaxValue)
+            if (_FrameRemarkBytes.Length > ushort.MaxValue)
             {
                 throw new Exception("Maximum remark length is " + ushort.MaxValue);
             }
-            List<byte> heads = new List<byte>(remark.Length + 11);
+            List<byte> heads = new List<byte>(_FrameRemarkBytes.Length + 11);
             heads.Add(this.FrameType);//1 bytes
-            heads.AddRange(BitConverter.GetBytes((ushort)remark.Length));//2 bytes
+            heads.AddRange(BitConverter.GetBytes((ushort)_FrameRemarkBytes.Length));//2 bytes
             heads.AddRange(BitConverter.GetBytes(contentLen));//8 bytes
-            heads.AddRange(remark);//remark bytes
+            heads.AddRange(_FrameRemarkBytes);//remark bytes
             return heads.ToArray();
+        }
+        public ushort GetRemarkLength()
+        {
+            if (_FrameRemarkBytes.Length > ushort.MaxValue)
+            {
+                throw new Exception("Maximum remark length is " + ushort.MaxValue);
+            }
+            return (ushort)_FrameRemarkBytes.Length;
+        }
+        public long GetContentLength()
+        {
+            return FrameContent != null ? FrameContent.Length : 0;
+        }
+        public long GetFrameLength()
+        {
+            //11: type=1&remarkLen=2&contentLen=8
+            return 11 + GetContentLength() + GetRemarkLength();
+        }
+        public byte GetFrameType()
+        {
+            return this.FrameType;
         }
         private void Read(DataFrameReadHandler handler, bool includeHead)
         {

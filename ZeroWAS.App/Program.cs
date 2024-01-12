@@ -17,7 +17,7 @@ namespace ZeroWAS.App
             Console.CancelKeyPress += Console_CancelKeyPress;
             if (ZeroWASInit())
             {
-                //RawSocketClientInit(1);
+                RawSocketClientInit(1);
                 //WebSocketClientInit(5);
                 Console.WriteLine("HostName=>{0}", webServer.WebApp.HostName);
                 while (true)
@@ -225,7 +225,6 @@ namespace ZeroWAS.App
                         msg = "Type=" + data.FrameType + "&Length=" + data.FrameContent.Length;
                     }
                     Console.WriteLine("【{0}】{1}:{2}", context.Channel.Path, context.User, msg);
-                    context.SendData(new ZeroWAS.RawSocket.DataFrame { FrameType = 101 });
                 }
             });
 

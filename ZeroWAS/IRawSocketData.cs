@@ -17,6 +17,10 @@ namespace ZeroWAS
         void ReadAll(RawSocket.DataFrameReadHandler handler);
         void ReadContent(RawSocket.DataFrameReadHandler handler);
         string GetFrameContentString();
+        ushort GetRemarkLength();
+        long GetContentLength();
+        long GetFrameLength();
+        byte GetFrameType();
     }
 
 }

@@ -35,7 +35,7 @@ namespace ZeroWAS.RawSocket
             Common.SocketManager<TUser>.ForeachRS(new Common.SocketManager<TUser>.ForeachHeadler((accepter) => {
                 if (accepter.User.Equals(toUser) && accepter.RawSocketChannelPath == this.Path)
                 {
-                    AddPushTask(new PushTask<TUser> { Content = data, Accepter = accepter });
+                    AddPushTask(new PushTask<TUser> { Content= data, Accepter = accepter });
                     //return false;//不能中断：因为会存在 一个用户 在 不同地方 登录了同一个频道
                 }
                 return true;//继续
