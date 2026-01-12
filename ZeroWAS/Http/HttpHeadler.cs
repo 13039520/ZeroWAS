@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ZeroWAS.Http
 {
@@ -8,57 +9,23 @@ namespace ZeroWAS.Http
     {
         private string _Key = "";
         public string Key { get { return _Key; } }
-        private string[] _Suffix = new string[0];
-        public string[] Suffix { get { return _Suffix; } }
-        private string[] _BasePath = new string[] { "/" };
-        public string[] BasePath { get { return _BasePath; } }
+        private string _PathAndQueryPattern = "";
+        public string PathAndQueryPattern { get { return _PathAndQueryPattern; } }
+        private System.Text.RegularExpressions.RegexOptions _RegexOptions;
+        public System.Text.RegularExpressions.RegexOptions RegexOptions { get { return _RegexOptions; } }
 
-        public HttpHeadler(IWebApplication app, string handlerKey, string[] suffix, string[] basePath)
+        public HttpHeadler(string handlerKey, string pathAndQueryPattern, System.Text.RegularExpressions.RegexOptions regexOptions= System.Text.RegularExpressions.RegexOptions.IgnoreCase)
         {
             if (!string.IsNullOrEmpty(handlerKey))
             {
                 _Key = handlerKey;
             }
-            if (basePath != null && basePath.Length > 0)
+            if (string.IsNullOrEmpty(pathAndQueryPattern))
             {
-                _BasePath = basePath;
+                throw new ArgumentException(nameof(pathAndQueryPattern));
             }
-            if (suffix is null)
-            {
-                suffix = new string[] { ".*" };
-            }
-            List<string> temp = new List<string>();
-            foreach (string s in suffix)
-            {
-                if (string.IsNullOrEmpty(s)) { continue; }
-                string t = s.Trim().ToLower();
-                if (t[0] != '.')
-                {
-                    t = "." + t;
-                }
-                if (t == ".*")
-                {
-                    temp.Clear();
-                    temp.Add(t);
-                    break;
-                }
-                temp.Add(t);
-            }
-            _Suffix = temp.ToArray();
-
-            //有虚拟目录
-            if (app.ResourceDirectory.Length > 1)
-            {
-                temp = new List<string>(_BasePath);
-                //第一个是主目录
-                for (int i = 1; i < app.ResourceDirectory.Length; i++)
-                {
-                    string name = "/" + app.ResourceDirectory[i].Name.ToLower() + "/";
-                    if (temp.Contains(name)) { continue; }
-                    temp.Add(name);
-                }
-                _BasePath = temp.ToArray();
-            }
+            _RegexOptions= regexOptions;
+            _PathAndQueryPattern = pathAndQueryPattern;
         }
 
         public virtual void ProcessRequest(IHttpContext context)

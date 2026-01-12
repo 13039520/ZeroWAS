@@ -129,7 +129,7 @@ namespace ZeroWAS.App
             System.IO.FileInfo config = new System.IO.FileInfo(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "site.txt"));
             webServer = new ZeroWAS.WebServer<string>(3000, ZeroWAS.WebApplication.FromFile(config));
             webServer.WebApp.AddService(typeof(UserService), new UserService());
-
+            
             //webServer.AddHttpHandler(new MyHtmlPageHandler(webServer.WebApp));
             //webServer.AddHttpHandler(new ZeroWAS.Http.StaticFileHandler(webServer.WebApp));
             //webServer.AddHttpHandler(new MyCrossOriginApi001Handler(webServer.WebApp));
@@ -323,7 +323,7 @@ namespace ZeroWAS.App
         public class MyCrossOriginApi001Handler : Http.HttpHeadler
         {
             public MyCrossOriginApi001Handler(IWebApplication app) 
-                : base(app, "CrossOriginApi001", new string[] { ".api" }, new string[] { "/" })
+                : base("CrossOriginApi001", @"^/.+\.api")
             {
 
             }
@@ -365,7 +365,7 @@ namespace ZeroWAS.App
         public class MyHtmlPageHandler : ZeroWAS.Http.HttpHeadler
         {
             public MyHtmlPageHandler(ZeroWAS.IWebApplication app)
-                : base(app, "HTMLPAGE", new string[] { ".html" }, new string[] { "/" })
+                : base("HTMLPAGE", @"^/.+\.html\b")
             {
 
             }

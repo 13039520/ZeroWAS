@@ -14,10 +14,7 @@ namespace ZeroWAS.Http
     public class StaticFileHandler : Http.HttpHeadler
     {
         public StaticFileHandler(IWebApplication app):
-            base(app, 
-                "HttpStaticFile", 
-                new string[] { ".html", ".htm", ".css", ".js", ".txt", ".ico", ".jpg", ".jpeg", ".jpe", ".png", ".gif", ".webp", ".bmp" }, 
-                new string[] { "/" })
+            base("HttpStaticFile", @"^/.+\.(html|htm|css|.js|txt|ico|jpg|jpeg|jpe|png|gif|webp|bmp)\b")
         {
             
         }

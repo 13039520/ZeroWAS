@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace ZeroWAS
@@ -213,8 +214,18 @@ namespace ZeroWAS
 
         public static WebApplication FromFile(System.IO.FileInfo file)
         {
+            string text = "";
+            if (file.Exists) { text = File.ReadAllText(file.FullName); }
+            return FromText(text);
+        }
+        public static WebApplication FromText(string text)
+        {
+            return FromStringReader(new StringReader(text));
+        }
+        public static WebApplication FromStringReader(StringReader reader)
+        {
             WebApplication reval = new WebApplication();
-            if (file == null || !file.Exists) { return reval; }
+            if (reader == null) { return reval; }
             string ListenIP = "";
             int ListenPort = 0;
             string ServerName = "";
@@ -233,110 +244,132 @@ namespace ZeroWAS
             System.IO.DirectoryInfo SiteHomeDirectory = null;
             List<System.IO.DirectoryInfo> SiteVirtualDirectory = new List<System.IO.DirectoryInfo>();
             List<string> crossOrigins = new List<string>();
-            using (var reader = file.OpenText())
+            try
             {
-                try
+                string line = reader.ReadLine();
+                while (line != null)
                 {
-                    string line = reader.ReadLine();
-                    while (line != null)
+                    if (line.Length < 1 || line.IndexOf("//") == 0)
                     {
-                        if (line.Length < 1||line.IndexOf("//")==0)
-                        {
-                            line = reader.ReadLine();
-                            continue;
-                        }
+                        line = reader.ReadLine();
+                        continue;
+                    }
 
-                        int index = line.IndexOf('=');
-                        if (index < 1 || index + 1 >= line.Length)
-                        {
-                            line = reader.ReadLine();
-                            continue;
-                        }
-                        string name = line.Substring(0, index).Trim();
-                        string value = line.Substring(index + 1).Trim();
-                        switch (name)
-                        {
-                            case "ListenIP":
-                                ListenIP = value;
-                                break;
-                            case "ListenPort":
-                                int.TryParse(value, out ListenPort);
-                                break;
-                            case "HostName":
-                                HostName = value;
-                                break;
-                            case "ServerName":
-                                ServerName = value;
-                                break;
-                            case "HttpConnectionMax":
-                                int.TryParse(value, out HttpConnectionMax);
-                                break;
-                            case "WSConnectionMax":
-                                int.TryParse(value, out WSConnectionMax);
-                                break;
-                            case "HttpNoDataActivityHoldTime":
-                                int.TryParse(value, out HttpNoDataActivityHoldTime);
-                                break;
-                            case "HttpLargeFileOutputThreshold":
-                                int.TryParse(value, out HttpLargeFileOutputThreshold);
-                                break;
-                            case "HttpLargeFileOutputRate":
-                                int.TryParse(value, out HttpLargeFileOutputRate);
-                                break;
-                            case "HttpMaxURILength":
-                                int.TryParse(value, out HttpMaxURILength);
-                                break;
-                            case "HttpMaxContentLength":
-                                long.TryParse(value, out HttpMaxContentLength);
-                                break;
-                            case "SiteStaticFileSuffix":
-                                var mc = System.Text.RegularExpressions.Regex.Matches(value, @"\.[0-9a-zA-Z]{1,10}");
-                                foreach (System.Text.RegularExpressions.Match m in mc)
+                    int index = line.IndexOf('=');
+                    if (index < 1 || index + 1 >= line.Length)
+                    {
+                        line = reader.ReadLine();
+                        continue;
+                    }
+                    string name = line.Substring(0, index).Trim();
+                    string value = line.Substring(index + 1).Trim();
+                    switch (name)
+                    {
+                        case "ListenIP":
+                            ListenIP = value;
+                            break;
+                        case "ListenPort":
+                            int.TryParse(value, out ListenPort);
+                            break;
+                        case "HostName":
+                            HostName = value;
+                            break;
+                        case "ServerName":
+                            ServerName = value;
+                            break;
+                        case "HttpConnectionMax":
+                            int.TryParse(value, out HttpConnectionMax);
+                            break;
+                        case "WSConnectionMax":
+                            int.TryParse(value, out WSConnectionMax);
+                            break;
+                        case "HttpNoDataActivityHoldTime":
+                            int.TryParse(value, out HttpNoDataActivityHoldTime);
+                            break;
+                        case "HttpLargeFileOutputThreshold":
+                            int.TryParse(value, out HttpLargeFileOutputThreshold);
+                            break;
+                        case "HttpLargeFileOutputRate":
+                            int.TryParse(value, out HttpLargeFileOutputRate);
+                            break;
+                        case "HttpMaxURILength":
+                            int.TryParse(value, out HttpMaxURILength);
+                            break;
+                        case "HttpMaxContentLength":
+                            long.TryParse(value, out HttpMaxContentLength);
+                            break;
+                        case "SiteStaticFileSuffix":
+                            var mc = System.Text.RegularExpressions.Regex.Matches(value, @"\.[0-9a-zA-Z]{1,10}");
+                            foreach (System.Text.RegularExpressions.Match m in mc)
+                            {
+                                string suffix = m.Value.ToLower();
+                                if (!SiteStaticFileSuffix.Contains(suffix))
                                 {
-                                    string suffix = m.Value.ToLower();
-                                    if (!SiteStaticFileSuffix.Contains(suffix))
-                                    {
-                                        SiteStaticFileSuffix.Add(suffix);
-                                    }
+                                    SiteStaticFileSuffix.Add(suffix);
                                 }
-                                break;
-                            case "SiteDefaultFile":
-                                var mc2 = System.Text.RegularExpressions.Regex.Matches(value, @"[0-9a-zA-Z]{1,20}\.[0-9a-zA-Z]{1,10}");
-                                foreach (System.Text.RegularExpressions.Match m in mc2)
+                            }
+                            break;
+                        case "SiteDefaultFile":
+                            var mc2 = System.Text.RegularExpressions.Regex.Matches(value, @"[0-9a-zA-Z]{1,20}\.[0-9a-zA-Z]{1,10}");
+                            foreach (System.Text.RegularExpressions.Match m in mc2)
+                            {
+                                string fname = m.Value.ToLower();
+                                if (!SiteDefaultFile.Contains(fname))
                                 {
-                                    string fname = m.Value.ToLower();
-                                    if (!SiteDefaultFile.Contains(fname))
-                                    {
-                                        SiteDefaultFile.Add(fname);
-                                    }
+                                    SiteDefaultFile.Add(fname);
                                 }
-                                break;
-                            case "SiteHomeDirectory":
-                                if (value.IndexOf("@AppBaseDir/") != 0)
+                            }
+                            break;
+                        case "SiteHomeDirectory":
+                            if (value.IndexOf("@AppBaseDir/") != 0)
+                            {
+                                System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(value);
+                                if (dir.Exists)
                                 {
+                                    SiteHomeDirectory = dir;
+                                }
+                            }
+                            else
+                            {
+                                value = value.Substring(12);
+                                if (value.Length > 0)
+                                {
+                                    value = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, value);
                                     System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(value);
                                     if (dir.Exists)
                                     {
                                         SiteHomeDirectory = dir;
                                     }
                                 }
-                                else
+                            }
+                            break;
+                        case "SiteVirtualDirectory":
+                            if (value.IndexOf("@AppBaseDir/") != 0)
+                            {
+                                System.IO.DirectoryInfo dir2 = new System.IO.DirectoryInfo(value);
+                                if (dir2.Exists)
                                 {
-                                    value = value.Substring(12);
-                                    if (value.Length > 0)
+                                    bool exists = false;
+                                    foreach (System.IO.DirectoryInfo d in SiteVirtualDirectory)
                                     {
-                                        value = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, value);
-                                        System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(value);
-                                        if (dir.Exists)
+                                        if (d.FullName.Equals(dir2.FullName, StringComparison.OrdinalIgnoreCase))
                                         {
-                                            SiteHomeDirectory = dir;
+                                            exists = true;
+                                            break;
                                         }
                                     }
+                                    if (!exists)
+                                    {
+                                        SiteVirtualDirectory.Add(dir2);
+                                    }
                                 }
-                                break;
-                            case "SiteVirtualDirectory":
-                                if (value.IndexOf("@AppBaseDir/") != 0)
+                            }
+                            else
+                            {
+                                value = value.Substring(12);
+                                if (value.Length > 0)
                                 {
+                                    value = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, value);
                                     System.IO.DirectoryInfo dir2 = new System.IO.DirectoryInfo(value);
                                     if (dir2.Exists)
                                     {
@@ -355,104 +388,82 @@ namespace ZeroWAS
                                         }
                                     }
                                 }
+                            }
+                            break;
+                        case "SiteMIME":
+                            if (!string.IsNullOrEmpty(value) && value[0] == '.')
+                            {
+                                string[] kv = value.Split(new char[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
+                                if (kv.Length == 2)
+                                {
+                                    kv[0] = kv[0].Trim().TrimStart('.');
+                                    kv[1] = kv[1].Trim();
+                                    if (kv[0].Length > 0 && kv[1].Length > 0)
+                                    {
+                                        Common.FileMimeTypeMapping.AddOrUpdateMapping(kv[0], kv[1]);
+                                    }
+                                }
+                            }
+                            break;
+                        case "PFXCertificateFilePath":
+                            string suffix2 = System.IO.Path.GetExtension(value);
+                            if (!string.IsNullOrEmpty(suffix2) && suffix2.ToLower() == ".pfx")
+                            {
+                                if (value.IndexOf("@AppBaseDir/") != 0)
+                                {
+                                    if (System.IO.File.Exists(value))
+                                    {
+                                        PFXCertificateFilePath = value;
+                                    }
+                                }
                                 else
                                 {
-                                    value = value.Substring(12);
+                                    value = value.Substring(11);
                                     if (value.Length > 0)
                                     {
                                         value = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, value);
-                                        System.IO.DirectoryInfo dir2 = new System.IO.DirectoryInfo(value);
-                                        if (dir2.Exists)
-                                        {
-                                            bool exists = false;
-                                            foreach (System.IO.DirectoryInfo d in SiteVirtualDirectory)
-                                            {
-                                                if (d.FullName.Equals(dir2.FullName, StringComparison.OrdinalIgnoreCase))
-                                                {
-                                                    exists = true;
-                                                    break;
-                                                }
-                                            }
-                                            if (!exists)
-                                            {
-                                                SiteVirtualDirectory.Add(dir2);
-                                            }
-                                        }
-                                    }
-                                }
-                                break;
-                            case "SiteMIME":
-                                if (!string.IsNullOrEmpty(value)&&value[0]=='.')
-                                {
-                                    string[] kv = value.Split(new char[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
-                                    if (kv.Length == 2)
-                                    {
-                                        kv[0] = kv[0].Trim().TrimStart('.');
-                                        kv[1] = kv[1].Trim();
-                                        if (kv[0].Length > 0 && kv[1].Length > 0)
-                                        {
-                                            Common.FileMimeTypeMapping.AddOrUpdateMapping(kv[0], kv[1]);
-                                        }
-                                    }
-                                }
-                                break;
-                            case "PFXCertificateFilePath":
-                                string suffix2 = System.IO.Path.GetExtension(value);
-                                if (!string.IsNullOrEmpty(suffix2) && suffix2.ToLower() == ".pfx")
-                                {
-                                    if (value.IndexOf("@AppBaseDir/") != 0)
-                                    {
                                         if (System.IO.File.Exists(value))
                                         {
                                             PFXCertificateFilePath = value;
                                         }
                                     }
-                                    else
+                                }
+                            }
+                            break;
+                        case "PFXCertificatePassword":
+                            if (!string.IsNullOrEmpty(value))
+                            {
+                                PFXCertificatePassword = value;
+                            }
+                            break;
+                        case "CrossOrigin":
+                            if (!string.IsNullOrEmpty(value))
+                            {
+                                string[] ss = value.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                                foreach (var s in ss)
+                                {
+                                    if (!System.Text.RegularExpressions.Regex.IsMatch(s, @"^(\*|[a-zA-Z0-9]{3,10}://[a-zA-Z0-9:\.]{5,})$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                                     {
-                                        value = value.Substring(11);
-                                        if (value.Length > 0)
-                                        {
-                                            value = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, value);
-                                            if (System.IO.File.Exists(value))
-                                            {
-                                                PFXCertificateFilePath = value;
-                                            }
-                                        }
+                                        continue;
+                                    }
+                                    if (null == crossOrigins.Find(o => string.Equals(o, s, StringComparison.OrdinalIgnoreCase)))
+                                    {
+                                        crossOrigins.Add(s);
                                     }
                                 }
-                                break;
-                            case "PFXCertificatePassword":
-                                if (!string.IsNullOrEmpty(value))
-                                {
-                                    PFXCertificatePassword = value;
-                                }
-                                break;
-                            case "CrossOrigin":
-                                if (!string.IsNullOrEmpty(value))
-                                {
-                                    string[] ss = value.Split(new char[] {','}, StringSplitOptions.RemoveEmptyEntries);
-                                    foreach(var s in ss)
-                                    {
-                                        if (!System.Text.RegularExpressions.Regex.IsMatch(s, @"^(\*|[a-zA-Z0-9]{3,10}://[a-zA-Z0-9:\.]{5,})$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-                                        {
-                                            continue;
-                                        }
-                                        if (null == crossOrigins.Find(o => string.Equals(o, s, StringComparison.OrdinalIgnoreCase)))
-                                        {
-                                            crossOrigins.Add(s);
-                                        }
-                                    }
-                                }
-                                break;
-                        }
-
-                        line = reader.ReadLine();
+                            }
+                            break;
                     }
+
+                    line = reader.ReadLine();
                 }
-                catch { }
             }
+            catch { }
+
+            reader.Close();
+
             ListenIP = ListenIP.Trim().ToLower();
-            
+
             bool ipIsLocalhostChars = false;
             if (!string.IsNullOrEmpty(ListenIP))
             {
@@ -476,7 +487,7 @@ namespace ZeroWAS
                 }
                 reval.ListenIP = ListenIP;
             }
-            if(ListenPort>0&& ListenPort< 65535)
+            if (ListenPort > 0 && ListenPort < 65535)
             {
                 reval.ListenPort = ListenPort;
             }
@@ -565,10 +576,10 @@ namespace ZeroWAS
             {
                 dirs.Add(reval.ResourceDirectory[0]);
             }
-            foreach(System.IO.DirectoryInfo d in SiteVirtualDirectory)
+            foreach (System.IO.DirectoryInfo d in SiteVirtualDirectory)
             {
                 bool exists = false;
-                foreach(System.IO.DirectoryInfo d2 in dirs)
+                foreach (System.IO.DirectoryInfo d2 in dirs)
                 {
                     if (d2.FullName.Equals(d.FullName, StringComparison.OrdinalIgnoreCase))
                     {
@@ -590,7 +601,7 @@ namespace ZeroWAS
             else
             {
                 string lastIpPort = "localhost" + (ListenPort != 80 ? ":" + ListenPort : "");
-                string origin = (reval.UseHttps ? "https" : "http") + "://"+ lastIpPort;
+                string origin = (reval.UseHttps ? "https" : "http") + "://" + lastIpPort;
                 if (lastIpPort != HostName && null == crossOrigins.Find(o => string.Equals(o, origin, StringComparison.OrdinalIgnoreCase)))
                 {
                     crossOrigins.Add(origin);
