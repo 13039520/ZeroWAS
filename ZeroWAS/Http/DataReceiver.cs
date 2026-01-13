@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace ZeroWAS.Http
@@ -22,7 +23,7 @@ namespace ZeroWAS.Http
         /// <para>4 Request error</para>
         /// </summary>
         int requestReadStep = 0;
-        bool isPost = false;
+        //bool isPost = false;
         long clinetId = 0;
         long readContentLength = 0;
         bool isFormDataWriteToFile = false;
@@ -120,7 +121,12 @@ namespace ZeroWAS.Http
                             //移除请求头部
                             bytes.RemoveRange(0, index2 + doubleNewlineCharBytes.Length);
 
-                            if (!isPost|| request.ContentLength < 1)
+                            /*if (!isPost|| request.ContentLength < 1)
+                            {
+                                requestReadStep = 3;//读取完成
+                                continue;
+                            }*/
+                            if (request.ContentLength < 1)
                             {
                                 requestReadStep = 3;//读取完成
                                 continue;
@@ -238,8 +244,16 @@ namespace ZeroWAS.Http
                     case 3:
 
                         #region -- 一次完整的请求数据读取结束 --
-                        
-                        if (isPost&& request.ContentLength > 0)
+
+                        /*if (isPost&& request.ContentLength > 0)
+                        {
+                            if (!BodyAnalyzer())
+                            {
+                                requestReadStep = 4;
+                                continue;
+                            }
+                        }*/
+                        if (request.ContentLength > 0)
                         {
                             if (!BodyAnalyzer())
                             {
@@ -292,7 +306,7 @@ namespace ZeroWAS.Http
             }
             if (request.ContentType.IndexOf("multipart/form-data") > -1)
             {
-                var m = System.Text.RegularExpressions.Regex.Match(request.ContentType, @"boundary=(?<b>[\-a-zA-Z0-9]{1,100})");
+                var m = System.Text.RegularExpressions.Regex.Match(request.ContentType, @"boundary=(?<b>[\-_a-zA-Z0-9]{1,100})");
                 if (!m.Success)
                 {
                     request.InputStream.Close();
@@ -684,7 +698,7 @@ namespace ZeroWAS.Http
                         request.Header.Add(key, val);
                     }
                 }
-                if (isPost)
+                /*if (isPost)
                 {
                     if (string.IsNullOrEmpty(request.Header["Content-Length"]))
                     {
@@ -692,6 +706,11 @@ namespace ZeroWAS.Http
                         return false;
                     }
                     request.ContentLength = Convert.ToInt64(request.Header["Content-Length"]);
+                }*/
+                string contentLength = request.Header["Content-Length"];
+                if (!string.IsNullOrEmpty(contentLength))
+                {
+                    request.ContentLength = Convert.ToInt64(contentLength);
                 }
                 if (!string.IsNullOrEmpty(request.Header["Content-Type"]))
                 {
@@ -699,7 +718,7 @@ namespace ZeroWAS.Http
                 }
                 else
                 {
-                    request.ContentType = "application/x-www-form-urlencoded";
+                    request.ContentType = "";
                 }
                 if (!string.IsNullOrEmpty(request.Header["Connection"]))
                 {
@@ -773,7 +792,7 @@ namespace ZeroWAS.Http
                 request.Cookies = new System.Collections.Specialized.NameValueCollection();
 
 
-                isPost = s1[0] == "POST";
+                //isPost = s1[0] == "POST";
             }
             catch { reval = true; }
             return reval;
