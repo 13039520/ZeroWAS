@@ -7,9 +7,14 @@ namespace ZeroWAS
 {
     public interface IHttpHandler
     {
+        /// <summary>
+        /// 处理程序Key标识
+        /// </summary>
         string Key { get; }
-        string PathAndQueryPattern { get; }
-        System.Text.RegularExpressions.RegexOptions RegexOptions {  get; }
+        /// <summary>
+        /// 正则表达式缓存
+        /// </summary>
+        System.Text.RegularExpressions.Regex CompiledRegex {  get; }
         void ProcessRequest(IHttpContext context);
     }
 }

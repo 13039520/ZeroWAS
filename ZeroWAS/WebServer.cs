@@ -303,7 +303,7 @@ namespace ZeroWAS
         {
             string path = req.URI.PathAndQuery;
             foreach (var h in _HttpHandler) {
-                if (System.Text.RegularExpressions.Regex.IsMatch(path, h.PathAndQueryPattern, h.RegexOptions))
+                if (h.CompiledRegex.IsMatch(path))
                 {
                     return h;
                 }

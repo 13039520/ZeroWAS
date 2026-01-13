@@ -9,10 +9,7 @@ namespace ZeroWAS.Http
     {
         private string _Key = "";
         public string Key { get { return _Key; } }
-        private string _PathAndQueryPattern = "";
-        public string PathAndQueryPattern { get { return _PathAndQueryPattern; } }
-        private System.Text.RegularExpressions.RegexOptions _RegexOptions;
-        public System.Text.RegularExpressions.RegexOptions RegexOptions { get { return _RegexOptions; } }
+        public System.Text.RegularExpressions.Regex CompiledRegex { get; }
 
         public HttpHeadler(string handlerKey, string pathAndQueryPattern, System.Text.RegularExpressions.RegexOptions regexOptions= System.Text.RegularExpressions.RegexOptions.IgnoreCase)
         {
@@ -24,8 +21,7 @@ namespace ZeroWAS.Http
             {
                 throw new ArgumentException(nameof(pathAndQueryPattern));
             }
-            _RegexOptions= regexOptions;
-            _PathAndQueryPattern = pathAndQueryPattern;
+            CompiledRegex= new System.Text.RegularExpressions.Regex(pathAndQueryPattern, regexOptions|System.Text.RegularExpressions.RegexOptions.Compiled);
         }
 
         public virtual void ProcessRequest(IHttpContext context)
