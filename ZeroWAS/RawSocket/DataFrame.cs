@@ -261,7 +261,7 @@ namespace ZeroWAS.RawSocket
 
         List<byte> _bytes = new List<byte>(2048);
 
-        public DataFrameReceiver() : this(new DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "_cache_")))
+        public DataFrameReceiver() : this(null)
         {
 
         }
@@ -269,7 +269,7 @@ namespace ZeroWAS.RawSocket
         {
             if (dir == null)
             {
-                dir = new DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "_cache_"));
+                dir = new DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "zerowas"));
             }
             if (!dir.Exists)
             {

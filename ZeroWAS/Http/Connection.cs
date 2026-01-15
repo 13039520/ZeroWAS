@@ -115,7 +115,7 @@ namespace ZeroWAS.Http
                         this.Dispose(ex);
                         return;
                     }
-                    receiver = new DataReceiver<TUser>(userRemoteAddress, userRemotePort, this.ClinetId, this.webApp);
+                    receiver = new DataReceiver<TUser>(userRemoteAddress, userRemotePort, this.webApp);
                     byte[] buffer = new byte[len];
                     int bound = -1;
                     while (bound != 0)
@@ -150,7 +150,7 @@ namespace ZeroWAS.Http
                 }
                 else
                 {
-                    receiver = new DataReceiver<TUser>(userRemoteAddress, userRemotePort, this.ClinetId, this.webApp);
+                    receiver = new DataReceiver<TUser>(userRemoteAddress, userRemotePort, this.webApp);
                     bool isFirst = true;
                     int bound = -1;
                     while (bound != 0)
@@ -257,10 +257,7 @@ namespace ZeroWAS.Http
                     if (this.socketAccepter != null)
                     {
                         this.socketAccepter.Close();
-                    }
-                    if (receiver != null)
-                    {
-                        receiver.CleanUp();
+                        //Console.WriteLine("连接已经 Close.");
                     }
                 }
                 catch { }
@@ -294,60 +291,6 @@ namespace ZeroWAS.Http
                 catch { }
             }
         }
-        private void FireErrorHandler(Exception ex)
-        {
-            if (OnErrorHandler != null)
-            {
-                try
-                {
-                    OnErrorHandler(this, ex);
-                }
-                catch { }
-            }
-        }
-        bool ValidateServerCertificate(object sender,
-            System.Security.Cryptography.X509Certificates.X509Certificate certificate,
-            System.Security.Cryptography.X509Certificates.X509Chain chain,
-            System.Net.Security.SslPolicyErrors sslPolicyErrors)
-        {
-            if (sslPolicyErrors == System.Net.Security.SslPolicyErrors.None)
-            {
-                return true;
-            }
-            return true;
-        }
-
-        long ByteArrayIndexOf(byte[] source, byte[] frame, long sourceIndex)
-        {
-            if (source != null &&
-                frame != null &&
-                source.Length > 0 &&
-                frame.Length > 0 &&
-                sourceIndex > -1 &&
-                source.Length >= frame.Length &&
-                frame.Length + sourceIndex < source.Length)
-            {
-                for (long i = sourceIndex; i < source.Length - frame.Length + 1; i++)
-                {
-                    if (source[i] == frame[0])
-                    {
-                        if (frame.Length < 2) { return i; }
-                        bool flag = true;
-                        for (long j = 1; j < frame.Length; j++)
-                        {
-                            if (source[i + j] != frame[j])
-                            {
-                                flag = false;
-                                break;
-                            }
-                        }
-                        if (flag) { return i; }
-                    }
-                }
-            }
-            return -1;
-        }
-
         public override bool Equals(object obj)
         {
             return (obj as IHttpConnection<TUser>).ClinetId == this.ClinetId;

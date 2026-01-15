@@ -7,7 +7,7 @@ namespace ZeroWAS.Http
     
     public class Response<TUser>: IHttpResponse
     {
-        public delegate void EndHandler(IHttpConnection<TUser> client, byte[] responseBytes, Status status, IHttpProcessingResult result, IHttpDataReceiver httpDataReceiver);
+        public delegate void EndHandler(IHttpConnection<TUser> client, byte[] responseBytes, Status status, IHttpProcessingResult result);
 
         private bool _IsWriteStaticFile = false;
         private bool _IsWriteChunked = false;
@@ -27,7 +27,7 @@ namespace ZeroWAS.Http
         private IHttpConnection<TUser> _Client = null;
         private IHttpRequest _Request = null;
         private IWebApplication _HttpServer = null;
-        private IHttpDataReceiver _HttpDataReceiver = null;
+        //private IHttpDataReceiver _HttpDataReceiver = null;
         private DateTime _BeginTime = DateTime.Now;
         private long _ReturnedContentLength = 0;
 
@@ -37,7 +37,7 @@ namespace ZeroWAS.Http
         /// </summary>
         public Status StatusCode { get { return _Status; } set { _Status = value; } }
 
-        public Response(IHttpConnection<TUser> client, IWebApplication httpServer, IHttpRequest httpRequest, IHttpDataReceiver httpDataReceiver, bool hasResponseEndHandler, EndHandler handler)
+        public Response(IHttpConnection<TUser> client, IWebApplication httpServer, IHttpRequest httpRequest, bool hasResponseEndHandler, EndHandler handler)
         {
             if (client == null)
             {
@@ -57,7 +57,7 @@ namespace ZeroWAS.Http
             _OnEndHandler = handler;
             _Request = httpRequest;
             _HasResponseEndHandler = hasResponseEndHandler;
-            _HttpDataReceiver = httpDataReceiver;
+            //_HttpDataReceiver = httpDataReceiver;
             if (httpRequest != null && !string.IsNullOrEmpty(httpRequest.HttpVersion))
             {
                 _ClinetHttpVersionNum = Convert.ToSingle(httpRequest.HttpVersion.Split('/')[1]);
@@ -573,7 +573,7 @@ namespace ZeroWAS.Http
 
             if (_IsWriteStaticFile)
             {
-                _OnEndHandler(_Client, null, StatusCode, result, _HttpDataReceiver);
+                _OnEndHandler(_Client, null, StatusCode, result);
             }
             else
             {
@@ -590,7 +590,7 @@ namespace ZeroWAS.Http
                 //主体内容
                 topBytes.AddRange(_Content);
 
-                _OnEndHandler(_Client, topBytes.ToArray(), StatusCode, result, _HttpDataReceiver);
+                _OnEndHandler(_Client, topBytes.ToArray(), StatusCode, result);
             }
 
         }
@@ -693,6 +693,15 @@ namespace ZeroWAS.Http
             return s.ToString();
         }
 
-
+        private int _disposed;
+        public void Dispose()
+        {
+            // 原子性防止重复 Dispose
+            if (System.Threading.Interlocked.Exchange(ref _disposed, 1) == 1)
+            {
+                return;
+            }
+            _Request.Dispose();
+        }
     }
 }

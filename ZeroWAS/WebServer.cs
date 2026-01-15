@@ -1,5 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
+using ZeroWAS.RawSocket;
 
 namespace ZeroWAS
 {
@@ -88,13 +92,13 @@ namespace ZeroWAS
             }
             Dispose();
         }
-        void RawStreamReceivedHandler(IHttpConnection<TUser> Connection, IHttpDataReceiver receiver, byte[] bytes)
+        void RawStreamReceivedHandler(IHttpConnection<TUser> connection, IHttpDataReceiver receiver, byte[] bytes)
         {
             bool isError = false;
-            switch (Connection.SocketType)
+            switch (connection.SocketType)
             {
                 case Common.SocketTypeEnum.WebSocket:
-                    WebSocket.Connection<TUser> ws = Common.SocketManager<TUser>.GetWSConnection(Connection);
+                    WebSocket.Connection<TUser> ws = Common.SocketManager<TUser>.GetWSConnection(connection);
                     if (ws != null)
                     {
                         try
@@ -111,7 +115,7 @@ namespace ZeroWAS
                     }
                     break;
                 case Common.SocketTypeEnum.RawSocket:
-                    RawSocket.Connection<TUser> rs = Common.SocketManager<TUser>.GetRSConnection(Connection);
+                    RawSocket.Connection<TUser> rs = Common.SocketManager<TUser>.GetRSConnection(connection);
                     if (rs != null)
                     {
                         try
@@ -132,10 +136,11 @@ namespace ZeroWAS
                     bool isCompleted = receiver.Receive(bytes);
                     if (isCompleted)
                     {
-                        Connection.HttpRequestCount++;
-                        Connection.LastActivityTime = DateTime.Now;
+                        connection.HttpRequestCount++;
+                        connection.LastActivityTime = DateTime.Now;
 
-                        var req = receiver.RequestData;
+                        IHttpRequest req = receiver.RequestData;
+                        receiver.RequestData = null;
 
                         #region -- 升级成WebSocket --
                         if (req.Method == "GET" && req.Header["Upgrade"] == "websocket" && WebSocketHub.HasChannel)
@@ -149,7 +154,8 @@ namespace ZeroWAS
                             var channel = WebSocketHub.ChannelSerach(uri);
                             if (channel != null)
                             {
-                                Common.SocketManager<TUser>.UpgradeWebSocket(Connection, _WebApp, channel, req);
+                                Common.SocketManager<TUser>.UpgradeWebSocket(connection, _WebApp, channel, req);
+                                req.Dispose();
                                 return;
                             }
                         }
@@ -164,31 +170,14 @@ namespace ZeroWAS
                             var channel = RawSocketHub.ChannelSerach(uri);
                             if (channel != null)
                             {
-                                Common.SocketManager<TUser>.UpgradeRawSocket(Connection, _WebApp, channel, req);
+                                Common.SocketManager<TUser>.UpgradeRawSocket(connection, _WebApp, channel, req);
+                                req.Dispose();
                                 return;
                             }
                         }
                         #endregion
 
-                        var res = new Http.Response<TUser>(Connection, _WebApp, req, receiver, _hasResponseEndHandler, new Http.Response<TUser>.EndHandler(ResposeEnd));
-
-                        var handler = FindHttpHandler(req);
-                        if (handler != null)
-                        {
-                            handler.ProcessRequest(new Http.Context(_WebApp, req, res));
-                        }
-                        else
-                        {
-                            System.IO.FileInfo staticFile = _WebApp.GetStaticFile(req.URI.AbsolutePath);
-                            if (staticFile != null)
-                            {
-                                res.WriteStaticFile(staticFile);
-                            }
-                            else
-                            {
-                                WebApp.OnRequestReceivedHandler(new Http.Context(_WebApp, req, res));
-                            }
-                        }
+                        ProcessHttpRequest(connection, req);
                     }
                     else
                     {
@@ -200,9 +189,14 @@ namespace ZeroWAS
                                 req = new Http.Request();
                             }
                             //输出错误
-                            var res = new Http.Response<TUser>(Connection, _WebApp, req, receiver, _hasResponseEndHandler, new Http.Response<TUser>.EndHandler(ResposeEnd));
-                            res.StatusCode = receiver.ReceiveErrorHttpStatus;
-                            res.End();
+                            using (var res = new Http.Response<TUser>(connection, _WebApp, req, _hasResponseEndHandler, ResposeEnd))
+                            {
+                                res.StatusCode = receiver.ReceiveErrorHttpStatus;
+                                res.ContentType = "text/plain; charset=utf-8";
+                                byte[] error = Encoding.UTF8.GetBytes(string.IsNullOrEmpty(receiver.ReceiveErrorMsg) ? "未知错误" : receiver.ReceiveErrorMsg);
+                                res.Write(error);
+                                res.End();
+                            }
                             isError = true;
                         }
                     }
@@ -212,13 +206,40 @@ namespace ZeroWAS
             
             if (isError)
             {
-                Connection.Dispose();
+                connection.Dispose();
             }
+        }
+        void ProcessHttpRequest(IHttpConnection<TUser> connection, IHttpRequest req)
+        {
+            var res = new Http.Response<TUser>(connection, _WebApp, req, _hasResponseEndHandler, ResposeEnd);
+            ThreadPool.QueueUserWorkItem(delegate (object state)
+            {
+                var ctx = (Http.Response<TUser>)state;
+                var handler = FindHttpHandler(req);
+                if (handler != null)
+                {
+                    handler.ProcessRequest(new Http.Context(_WebApp, req, res));
+                }
+                else
+                {
+                    System.IO.FileInfo staticFile = _WebApp.GetStaticFile(req.URI.AbsolutePath);
+                    if (staticFile != null)
+                    {
+                        res.WriteStaticFile(staticFile);
+                    }
+                    else
+                    {
+                        WebApp.OnRequestReceivedHandler(new Http.Context(_WebApp, req, res));
+                    }
+                }
+                res.Dispose();
+                res = null;
+            }, res);
         }
         void RawStreamErrorHandler(object sender, Exception ex)
         {
-            IHttpConnection<TUser> Connection = sender as IHttpConnection<TUser>;
-            Connection.Dispose();
+            IHttpConnection<TUser> connection = sender as IHttpConnection<TUser>;
+            connection.Dispose();
             Console.WriteLine("Message={0}&TargetSite={1}&StackTrace=\r\n{2}", ex.Message, ex.TargetSite, ex.StackTrace);
         }
         void ReceiveData(object obj)
@@ -260,15 +281,11 @@ namespace ZeroWAS
                 System.Threading.Thread.Sleep(1000);
             }
         }
-        void ResposeEnd(IHttpConnection<TUser> client, byte[] resBytes, Http.Status status, IHttpProcessingResult result, IHttpDataReceiver httpDataReceiver)
+        void ResposeEnd(IHttpConnection<TUser> client, byte[] resBytes, Http.Status status, IHttpProcessingResult result)
         {
             if (resBytes != null && resBytes.Length > 0)
             {
                 client.Write(resBytes);
-            }
-            if (httpDataReceiver != null)
-            {
-                httpDataReceiver.CleanUp();
             }
             if (WebApp.OnResponseEndHandler != null)
             {

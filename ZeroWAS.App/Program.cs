@@ -130,22 +130,44 @@ namespace ZeroWAS.App
             webServer = new ZeroWAS.WebServer<string>(3000, ZeroWAS.WebApplication.FromFile(config));
             webServer.WebApp.AddService(typeof(UserService), new UserService());
             
-            //webServer.AddHttpHandler(new MyHtmlPageHandler(webServer.WebApp));
-            //webServer.AddHttpHandler(new ZeroWAS.Http.StaticFileHandler(webServer.WebApp));
-            //webServer.AddHttpHandler(new MyCrossOriginApi001Handler(webServer.WebApp));
-            /*http request with missing handler：*/
-            webServer.WebApp.OnRequestReceivedHandler = (context) =>
+            /*
+            webServer.AddHttpHandler(new CustomHttpHandler("ImageHandler",@"^/.+\.(jpg|png|gif|bmp|webp)\b", (context) =>
             {
-                var userService = context.GetService(typeof(UserService)) as UserService;
-                string userName = userService.GetUserNameByCookie(context.Request);
-                if (string.IsNullOrEmpty(userName))
+                System.IO.FileInfo fileInfo = context.Server.GetStaticFile(context.Request.URI.AbsolutePath);
+                if (fileInfo != null)
                 {
-                    context.Response.StatusCode = Http.Status.Forbidden;
+                    //A watermark can be added before output.
+                    context.Response.WriteStaticFile(fileInfo);
                 }
                 else
                 {
                     context.Response.StatusCode = Http.Status.Not_Found;
                 }
+                context.Response.End();
+            }));
+            */
+
+            //http request with missing handler
+            webServer.WebApp.OnRequestReceivedHandler = (context) =>
+            {
+                if (context.Request.ContentType.IndexOf("multipart/form-data") > -1)
+                {
+                    foreach (var key in context.Request.Files.Keys)
+                    {
+                        foreach (var file in context.Request.Files[key])
+                        {
+                            using (System.IO.FileStream fs = new System.IO.FileStream(System.IO.Path.Combine(@"D:\test", file.FileName), System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.Read))
+                            {
+                                file.SaveTo(fs);
+                            }
+                        }
+                    }
+                }
+                else if (context.Request.ContentType.IndexOf("application/x-www-form-urlencoded") > -1)
+                {
+                    Console.WriteLine("test={0}", context.Request.Form["test"]);
+                }
+                context.Response.StatusCode = Http.Status.Not_Found;
                 context.Response.End();
             };
             /*result resport of HTTP request：*/
@@ -240,14 +262,6 @@ namespace ZeroWAS.App
             if (StartException == null)
             {
                 Console.WriteLine("Listen=>{0}:{1}", webServer.WebApp.ListenIP, webServer.WebApp.ListenPort);
-                //Console.WriteLine("Open=>{0}", webServer.WebApp.HomePageUri);
-                //OpenUrl(webServer.WebApp.HomePageUri.ToString());
-                Console.WriteLine("HostName=>{0}", webServer.WebApp.HostName);
-                Console.WriteLine("CrossOrigins=>");
-                foreach (var str in webServer.WebApp.CrossOrigins)
-                {
-                    Console.WriteLine(str);
-                }
                 return true;
             }
             else
@@ -320,72 +334,25 @@ namespace ZeroWAS.App
             }
         }
 
-        public class MyCrossOriginApi001Handler : Http.HttpHeadler
+        public class CustomHttpHandler : ZeroWAS.Http.HttpHeadler
         {
-            public MyCrossOriginApi001Handler(IWebApplication app) 
-                : base("CrossOriginApi001", @"^/.+\.api")
+            private Action<ZeroWAS.IHttpContext> callback;
+            public CustomHttpHandler(string handlerKey, string pathAndQueryPattern, Action<ZeroWAS.IHttpContext> callback)
+                : base(handlerKey, pathAndQueryPattern)
             {
-
-            }
-
-            public override void ProcessRequest(IHttpContext context)
-            {
-                string origin = context.Request.Header["origin"];
-                if (!string.IsNullOrEmpty(origin) && !origin.EndsWith(context.Server.HostName, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (context.Server.IsCrossOrigin(origin, StringComparison.OrdinalIgnoreCase))
-                    {
-                        context.Response.StatusCode = Http.Status.OK;
-                        context.Response.AddHeader("Access-Control-Allow-Origin", origin);
-                        context.Response.AddHeader("Access-Control-Allow-Methods", "*");
-                        context.Response.AddHeader("Access-Control-Allow-Headers", "*");
-                        
-                        if (context.Request.Method != "OPTIONS")
-                        {
-                            context.Response.AddHeader("Content-Type", "application/json;charset=utf-8");
-                            context.Response.Write(System.Text.Encoding.UTF8.GetBytes("{\"Message\":\"Welcome Cross Origin User\",\"Data\":[]}"));
-                        }
-                    }
-                    else
-                    {
-                        context.Response.StatusCode = Http.Status.Bad_Request;
-                    }
-                }
-                else
-                {
-                    context.Response.StatusCode = Http.Status.OK;
-                    context.Response.AddHeader("Content-Type", "application/json;charset=utf-8");
-                    context.Response.Write(System.Text.Encoding.UTF8.GetBytes("{\"Message\":\"Welcome\",\"Data\":[]}"));
-                }
-                context.Response.End();
-            }
-
-        }
-
-        public class MyHtmlPageHandler : ZeroWAS.Http.HttpHeadler
-        {
-            public MyHtmlPageHandler(ZeroWAS.IWebApplication app)
-                : base("HTMLPAGE", @"^/.+\.html\b")
-            {
-
+                this.callback = callback;
             }
 
             public override void ProcessRequest(ZeroWAS.IHttpContext context)
             {
-                string cookie = context.Request.Cookies["token"];
-                if (string.IsNullOrEmpty(cookie))
+                if (callback!=null)
                 {
-                    string page = "/login.html";
-                    string localPath = context.Request.URI.LocalPath;
-                    if (!localPath.Equals(page, StringComparison.OrdinalIgnoreCase))
-                    {
-                        context.Response.StatusCode = ZeroWAS.Http.Status.Found;
-                        context.Response.Redirect(page + "?from=" + ZeroWAS.Http.Utility.UrlEncode(context.Request.URI.AbsoluteUri));
-                        //context.Response.End();
-                        return;
-                    }
+                    callback(context);
                 }
-                base.ProcessRequest(context);
+                else
+                {
+                    base.ProcessRequest(context);
+                }
             }
 
         }

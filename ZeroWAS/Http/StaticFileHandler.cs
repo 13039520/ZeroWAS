@@ -13,7 +13,7 @@ namespace ZeroWAS.Http
     */
     public class StaticFileHandler : Http.HttpHeadler
     {
-        public StaticFileHandler(IWebApplication app):
+        public StaticFileHandler():
             base("HttpStaticFile", @"^/.+\.(html|htm|css|.js|txt|ico|jpg|jpeg|jpe|png|gif|webp|bmp)\b")
         {
             

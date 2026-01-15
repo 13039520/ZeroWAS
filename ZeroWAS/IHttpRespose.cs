@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ZeroWAS
 {
-    public interface IHttpResponse
+    public interface IHttpResponse : IDisposable
     {
         string ContentType { get; set; }
         Http.Status StatusCode { get; set; }

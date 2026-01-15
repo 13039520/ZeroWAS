@@ -5,7 +5,7 @@ using System.Text;
 
 namespace ZeroWAS
 {
-    public interface IHttpRequest
+    public interface IHttpRequest: IDisposable
     {
         TimeSpan ReceivingTs { get; }
         string RequestLine { get; }
