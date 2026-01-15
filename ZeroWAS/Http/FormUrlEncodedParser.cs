@@ -4,119 +4,100 @@ using System.Text;
 
 namespace ZeroWAS.Http
 {
-    public delegate bool FormFieldCallback(string key, long valueOffset, int valueLength, bool mayNeedUrlDecode);
-    public sealed class FormUrlEncodedParser
+    public static class FormUrlEncodedParser
     {
-        private readonly Stream _stream;
-        private readonly Encoding _encoding;
-        private readonly byte[] _buffer;
+        private enum State { Name, Value }
 
-        public FormUrlEncodedParser(Stream stream, Encoding encoding = null, int bufferSize = 64 * 1024)
+        public static void Parse(Stream stream, FormFieldIndexInfoCallback callback)
         {
-            if (stream == null)
-                throw new ArgumentNullException(nameof(stream));
+            const int BufferSize = 8192;
+            byte[] buffer = new byte[BufferSize];
+            long globalOffset = 0;
+            long streamLength = stream.Length;
+            State state = State.Name;
 
-            _stream = stream;
-            _encoding = encoding ?? Encoding.UTF8;
-            _buffer = new byte[bufferSize];
-        }
-
-        public void Parse(FormFieldCallback callback)
-        {
-            if (callback == null)
-                throw new ArgumentNullException(nameof(callback));
-
-            long globalPos = 0;
-
-            MemoryStream keyBuffer = new MemoryStream();
-
-            bool inValue = false;
-            bool mayNeedDecode = false;
-
+            long nameStart = -1;
+            int nameLength = 0;
             long valueStart = -1;
-            long fieldStart = 0;
+            int valueLength = 0;
 
-            int read;
-            while ((read = _stream.Read(_buffer, 0, _buffer.Length)) > 0)
+            int bytesRead;
+            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
             {
-                for (int i = 0; i < read; i++)
+                for (int i = 0; i < bytesRead; i++, globalOffset++)
                 {
-                    byte b = _buffer[i];
+                    byte b = buffer[i];
 
-                    if (!inValue)
+                    if (state == State.Name)
                     {
+                        if (nameStart < 0)
+                        {
+                            if (globalOffset >= streamLength)//重要的判断
+                            {
+                                return;
+                            }
+                            nameStart = globalOffset;
+                        }
+
                         if (b == (byte)'=')
                         {
-                            inValue = true;
-                            mayNeedDecode = false;
-                            valueStart = globalPos + i + 1;
-                        }
-                        else if (b == (byte)'&')
-                        {
-                            // key-only 字段
-                            if (!Emit(callback, keyBuffer, -1, 0, false))
-                                return;
-
-                            keyBuffer.SetLength(0);
-                            fieldStart = globalPos + i + 1;
+                            state = State.Value;
+                            valueStart = globalOffset + 1;
                         }
                         else
                         {
-                            keyBuffer.WriteByte(b);
+                            nameLength++;
                         }
                     }
-                    else
+                    else // state == Value
                     {
-                        if (b == (byte)'%' || b == (byte)'+')
-                            mayNeedDecode = true;
-
                         if (b == (byte)'&')
                         {
-                            long valueEnd = globalPos + i;
-                            int valueLength = (int)(valueEnd - valueStart);
-
-                            if (!Emit(callback, keyBuffer, valueStart, valueLength, mayNeedDecode))
-                                return;
-
-                            // reset
-                            keyBuffer.SetLength(0);
-                            inValue = false;
+                            if (!callback(new FormFieldIndexInfo
+                            {
+                                NameOffset = nameStart,
+                                NameLength = nameLength,
+                                ValueOffset = valueStart,
+                                ValueLength = valueLength
+                            })) { return; }
+                            long endIndex = valueStart + valueLength;
+                            // reset 状态
+                            state = State.Name;
+                            nameStart = -1;
+                            nameLength = 0;
                             valueStart = -1;
-                            mayNeedDecode = false;
-                            fieldStart = globalPos + i + 1;
+                            valueLength = 0;
+
+                        }
+                        else
+                        {
+                            valueLength++;
                         }
                     }
                 }
-
-                globalPos += read;
             }
 
-            // 最后一个字段
-            if (keyBuffer.Length > 0)
+            // 循环结束后，只 callback 尚未 yield 的字段
+            if (nameStart > -1 && nameLength > 0)
             {
-                if (inValue)
+                callback(new FormFieldIndexInfo
                 {
-                    int valueLength = (int)(globalPos - valueStart);
-                    Emit(callback, keyBuffer, valueStart, valueLength, mayNeedDecode);
-                }
-                else
-                {
-                    Emit(callback, keyBuffer, -1, 0, false);
-                }
+                    NameOffset = nameStart,
+                    NameLength = nameLength,
+                    ValueOffset = valueStart >= 0 ? valueStart : nameStart + nameLength,
+                    ValueLength = valueLength
+                });
             }
         }
+    }
+    public delegate bool FormFieldIndexInfoCallback(FormFieldIndexInfo info);
+    public sealed class FormFieldIndexInfo
+    {
+        public long NameOffset;   // name 起始 byte 偏移
+        public int NameLength;    // name 长度（byte）
+        public long ValueOffset;  // value 起始 byte 偏移
+        public int ValueLength;   // value 长度（byte）
 
-        private bool Emit(
-            FormFieldCallback callback,
-            MemoryStream keyBuffer,
-            long valueOffset,
-            int valueLength,
-            bool mayNeedDecode)
-        {
-            string key = _encoding.GetString(
-                keyBuffer.GetBuffer(), 0, (int)keyBuffer.Length);
-
-            return callback(key, valueOffset, valueLength, mayNeedDecode);
-        }
+        public override string ToString() { return $"Name[{NameOffset},{NameLength}] Value[{ValueOffset},{ValueLength}]"; }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Text;
 using System.Threading;
 
@@ -152,6 +153,7 @@ namespace ZeroWAS.App
             {
                 if (context.Request.ContentType.IndexOf("multipart/form-data") > -1)
                 {
+                    Console.WriteLine("test={0}", context.Request.Form["test"]);
                     foreach (var key in context.Request.Files.Keys)
                     {
                         foreach (var file in context.Request.Files[key])
@@ -166,6 +168,7 @@ namespace ZeroWAS.App
                 else if (context.Request.ContentType.IndexOf("application/x-www-form-urlencoded") > -1)
                 {
                     Console.WriteLine("test={0}", context.Request.Form["test"]);
+                    Console.WriteLine("test2={0}", context.Request.Form["test2"]);
                 }
                 context.Response.StatusCode = Http.Status.Not_Found;
                 context.Response.End();
@@ -359,4 +362,5 @@ namespace ZeroWAS.App
 
 
     }
+    
 }

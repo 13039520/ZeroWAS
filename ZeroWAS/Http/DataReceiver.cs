@@ -276,41 +276,44 @@ namespace ZeroWAS.Http
             if (request.ContentLength < 1) { return true; }
             if (request.ContentType.IndexOf("application/x-www-form-urlencoded") > -1)
             {
-                var parser = new FormUrlEncodedParser(request.InputStream, Encoding.ASCII);
                 bool reval = true;
-                parser.Parse((key, offset, length, mayDecode) =>
-                {
-                    if (string.IsNullOrEmpty(key))
+
+                FormUrlEncodedParser.Parse(request.InputStream, (e) => {
+                    if (e.NameLength < 1) 
                     {
                         reval = false;
-                        ReceiveErrorMsg = "The name cannot be empty.";
-                        return false;
+                        ReceiveErrorMsg = "Empty names are not accepted.";
+                        return false;//不再继续解析
                     }
-                    if (key.Length > FieldNameLengthLimit)
+                    if (e.NameLength > FieldNameLengthLimit)
                     {
                         reval = false;
                         ReceiveErrorMsg = "The name length exceeds the limit.";
-                        return false;
+                        return false;//不再继续解析
                     }
-                    if (length > TextFieldLengthLimit)
+                    if (e.ValueLength > TextFieldLengthLimit)
                     {
-                        reval= false;
+                        reval = false;
                         ReceiveErrorMsg = "The length of a single text field exceeds the limit.";
                         return false;//不再继续解析
                     }
-                    byte[] buf = new byte[length];
-                    request.InputStream.Position = offset;
-                    request.InputStream.Read(buf, 0, length);
-                    if (mayDecode)
+                    request.InputStream.Position = e.NameOffset;
+                    byte[] bytes = new byte[e.NameLength];
+                    request.InputStream.Read(bytes, 0, bytes.Length);
+                    var name = Encoding.UTF8.GetString(bytes);
+                    var value = "";
+                    if (e.ValueLength > 0)
                     {
-                        request.Form.Add(key,Utility.UrlDecode(buf, request.Encoding));
+                        request.InputStream.Position = e.ValueOffset;
+                        bytes = new byte[e.ValueLength];
+                        request.InputStream.Read(bytes, 0, bytes.Length);
+                        value = Utility.UrlDecode(bytes, request.Encoding);
                     }
-                    else
-                    {
-                        request.Form.Add(key,request.Encoding.GetString(buf));
-                    }
+                    request.Form.Add(name, value);
+                    Console.WriteLine("【{0}={1}】", name, value);
+
                     return true; // 继续解析
-                });
+                });                
                 request.InputStream.Position = 0;
                 return reval;
             }
