@@ -4,10 +4,10 @@ using System.Text;
 
 namespace ZeroWAS.RawSocket
 {
-    public class PushTask<TUser>
+    internal class PushTask<TUser>: IRawSocketPushTask<TUser>
     {
-        public IRawSocketData Content { get; set; }
-        public IHttpConnection<TUser> Accepter { get; set; }
+        public IRawSocketSerializedMessage Content { get; set; }
+        public List<IHttpConnection<TUser>> Accepters { get; set; }
 
     }
 }

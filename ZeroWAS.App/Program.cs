@@ -4,21 +4,23 @@ using System.Data;
 using System.IO;
 using System.Text;
 using System.Threading;
+using ZeroWAS.RawSocket;
 
 namespace ZeroWAS.App
 {
     internal class Program
     {
         static ZeroWAS.IWebServer<string> webServer;
-        static ZeroWAS.RawSocket.Client rawSocketClient;
+        static ZeroWAS.RawSocket.Client rsClient;
         static ZeroWAS.WebSocket.Client webSocketClient;
         static System.Threading.Timer timer;
         static void Main(string[] args)
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
+            ZeroWAS.CacheDir.SetDirPath(@"D:\_cache_");
             if (ZeroWASInit())
             {
-                RawSocketClientInit(1);
+                RSClientInit(1);
                 //WebSocketClientInit(5);
                 Console.WriteLine("HostName=>{0}", webServer.WebApp.HostName);
                 while (true)
@@ -33,58 +35,68 @@ namespace ZeroWAS.App
         }
         static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
-            rawSocketClient?.Dispose();
+            rsClient?.Dispose();
             webSocketClient?.Dispose();
             webServer?.Dispose();
         }
 
         static bool isRawSocketClientInit = false;
-        static void RawSocketClientInit(int uid)
+        static void ReceivedHandle0x01(IRawSocketReceivedMessage msg)
         {
-            rawSocketClient = new RawSocket.Client(new Uri("http://" + webServer.WebApp.HostName + "/RawSocket?uid=" + uid));
-            rawSocketClient.OnConnectErrorHandler = (e) => {
+            Console.WriteLine("RS_Client Received: [{0}]{1}", msg.ContentLength, msg.ReadContentAsString(Encoding.UTF8));
+        }
+        static void ReceivedHandle0xff(IRawSocketReceivedMessage msg)
+        {
+            string name = msg.Remark;
+            if (string.IsNullOrEmpty(name))
+            {
+                name = "unknown.tmp";
+            }
+            string path = Path.Combine(@"D:\upload\files", name);
+            using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
+            {
+                msg.CopyContentData(fs);
+            }
+            Console.WriteLine("RS_Client Received File：[{0}]{1}", msg.ContentLength, path);
+        }
+        static void RSClientInit(int uid)
+        {
+            rsClient = new RawSocket.Client(new Uri("http://127.0.0.1:6005/RawSocket?uid=" + uid));
+            rsClient.OnConnectErrorHandler = (e) => {
                 Console.WriteLine(e.SocketException.Message);
                 e.Retry = true;
             };
-            rawSocketClient.OnConnectedHandler = () => {
-                Console.WriteLine("RawSocketClient Connected: ClientId=" + rawSocketClient.ClinetId);
-                rawSocketClient.SendData(new RawSocket.DataFrame
-                {
-                    FrameType = 1,
-                    FrameContent = new System.IO.MemoryStream(Encoding.UTF8.GetBytes("hello server!"))
-                });
+            rsClient.OnConnectedHandler = () => {
+                Console.WriteLine("RS_Client Connected: ClientId=" + rsClient.ClientId);
+                rsClient.SendData(new RawSocket.SendMessage(1, "Hello server!", ""));
             };
-            rawSocketClient.OnDisconnectHandler = (e) => {
-                Console.WriteLine("RawSocketClient Disconnect({0})", e.Message);
+            rsClient.OnDisconnectHandler = (e) => {
+                Console.WriteLine("RS_Client Disconnect({0})", e.Message);
             };
-            rawSocketClient.OnReceivedHandler = (e) => {
-                if (e.FrameType == 1)
-                {
-                    Console.WriteLine("RawSocketClient Received: {0}", e.GetFrameContentString());
-                }
-                else
-                {
-                    Console.WriteLine("RawSocketClient Received: FrameType={0}&FrameContentLength={1}", e.FrameType, e.FrameContent?.Length);
-                }
+            rsClient.ReceivedHandleRegister(0x01, ReceivedHandle0x01);
+            rsClient.ReceivedHandleRegister(0xff, ReceivedHandle0xff);
+            rsClient.OnReceivedHandler = (e) => {
+                //缺少 Handler 处理程序
+                Console.WriteLine("RS_Client Received: Type={0}&ContentLength={1}&RemarkLength={2}", e.Type, e.ContentLength, e.RemarkLength);
             };
-            rawSocketClient.Connect();
-            RawSocketClientWriteLine();
+            rsClient.Connect();
+            RSClientReadLine();
         }
-        static void RawSocketClientWriteLine()
+        static void RSClientReadLine()
         {
             string line = Console.ReadLine();
             if (!string.IsNullOrEmpty(line))
             {
-                if (rawSocketClient.IsConnencted)
+                if (rsClient.IsConnected)
                 {
-                    rawSocketClient.SendData(new RawSocket.DataFrame(line, 1));
+                    rsClient.SendData(new RawSocket.SendMessage(1, line, ""));
                 }
             }
-            RawSocketClientWriteLine();
+            RSClientReadLine();
         }
         static void WebSocketClientInit(int uid)
         {
-            webSocketClient = new WebSocket.Client(new Uri("ws://" + webServer.WebApp.HostName + "/WebSocket?uid=" + uid));
+            webSocketClient = new WebSocket.Client(new Uri("ws://127.0.0.1:6005/WebSocket?uid=" + uid));
             webSocketClient.OnConnectErrorHandler = (e) => {
                 Console.WriteLine(e.SocketException.Message);
                 e.Retry = true;
@@ -122,17 +134,13 @@ namespace ZeroWAS.App
             WebSocketClientWriteLine();
         }
 
-        
-
         static bool ZeroWASInit()
         {
-            /*site config：*/
             System.IO.FileInfo config = new System.IO.FileInfo(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "site.txt"));
             webServer = new ZeroWAS.WebServer<string>(3000, ZeroWAS.WebApplication.FromFile(config));
             webServer.WebApp.AddService(typeof(UserService), new UserService());
             
-            /*
-            webServer.AddHttpHandler(new CustomHttpHandler("ImageHandler",@"^/.+\.(jpg|png|gif|bmp|webp)\b", (context) =>
+            webServer.AddHttpHandler(new HttpHandlers.SuffixHttpHandler("ImageHandler",new string[] {".jpg",".jpeg",".png", ".gif", ".webp" }, (context) =>
             {
                 System.IO.FileInfo fileInfo = context.Server.GetStaticFile(context.Request.URI.AbsolutePath);
                 if (fileInfo != null)
@@ -146,8 +154,6 @@ namespace ZeroWAS.App
                 }
                 context.Response.End();
             }));
-            */
-
             //http request with missing handler
             webServer.WebApp.OnRequestReceivedHandler = (context) =>
             {
@@ -228,10 +234,10 @@ namespace ZeroWAS.App
                     string userName = userService.GetUserNameByQuery(req);
                     if (string.IsNullOrEmpty(userName))
                     {
-                        return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = false, User = "", FrameContent = null, FrameType = 1, FrameRemark = "missing identity." };
+                        return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = false, User = "", MessageContent = null, MessageType = 1, MessageRemark = "missing identity." };
                     }
                     Console.WriteLine("【{0}】{1}:ENTER", wsChannelPath, userName);
-                    return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = true, User = userName, FrameContent = null, FrameType = 1, FrameRemark = "Welcome to the chat room." };
+                    return new ZeroWAS.RawSocket.AuthResult<string> { IsOk = true, User = userName, MessageContent = Encoding.UTF8.GetBytes("Hello client."), MessageType = 1, MessageRemark = clientId.ToString() };
                 },
                 OnDisconnectedHandler = (context, ex) =>
                 {
@@ -241,15 +247,30 @@ namespace ZeroWAS.App
                 OnReceivedHandler = (context, data) =>
                 {
                     string msg = "";
-                    if (data.FrameType == 1)
+                    if (data.Type == 1)
                     {
-                        msg = data.GetFrameContentString();
+                        msg = data.ReadContentAsString(Encoding.UTF8);
                     }
                     else
                     {
-                        msg = "Type=" + data.FrameType + "&Length=" + data.FrameContent.Length;
+                        msg = "Type=" + data.Type;
                     }
                     Console.WriteLine("【{0}】{1}:{2}", context.Channel.Path, context.User, msg);
+                    if (data.Type == 1 && msg == "LargeFileTransferTest")
+                    {
+                        string path = @"D:\LargeFile.zip";
+                        IRawSocketSendMessage reply;
+                        if (File.Exists(path))
+                        {
+                            string name = Path.GetFileName(path);
+                            reply = new SendMessage(255, new FileStream(path, FileMode.Open), name);
+                        }
+                        else
+                        {
+                            reply = new SendMessage(1, "File Not Found.", "");
+                        }
+                        context.SendData(reply, context.User);
+                    }
                 }
             });
 
@@ -271,22 +292,6 @@ namespace ZeroWAS.App
             {
                 Console.WriteLine("Error=>{0}",StartException.Message);
                 return false;
-            }
-        }
-        static void OpenUrl(string url)
-        {
-            try
-            {
-                var psi = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = url,
-                    UseShellExecute = true
-                };
-                System.Diagnostics.Process.Start(psi);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error=>{0}",e.Message);
             }
         }
 
@@ -336,30 +341,6 @@ namespace ZeroWAS.App
                 return string.Empty;
             }
         }
-
-        public class CustomHttpHandler : ZeroWAS.Http.HttpHeadler
-        {
-            private Action<ZeroWAS.IHttpContext> callback;
-            public CustomHttpHandler(string handlerKey, string pathAndQueryPattern, Action<ZeroWAS.IHttpContext> callback)
-                : base(handlerKey, pathAndQueryPattern)
-            {
-                this.callback = callback;
-            }
-
-            public override void ProcessRequest(ZeroWAS.IHttpContext context)
-            {
-                if (callback!=null)
-                {
-                    callback(context);
-                }
-                else
-                {
-                    base.ProcessRequest(context);
-                }
-            }
-
-        }
-
 
     }
     

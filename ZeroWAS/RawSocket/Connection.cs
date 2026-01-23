@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace ZeroWAS.RawSocket
@@ -27,7 +28,7 @@ namespace ZeroWAS.RawSocket
         private Handlers<TUser>.DisconnectedHandler _OnDisconnectedHandler;
         private Handlers<TUser>.ReceivedHandler _OnReceivedHandler;
         private bool _HasOnReceivedHandler = false;
-        private IDataFrameReceiver frameReceiver;
+        private MessageReceiver frameReceiver;
         private long rsClinetId = 0;
         private bool isDisconnected = false;
 
@@ -47,8 +48,8 @@ namespace ZeroWAS.RawSocket
                 _HasOnReceivedHandler = _OnReceivedHandler != null;
             }
             this.rsClinetId = socketAccepter.ClinetId;
-            frameReceiver = new DataFrameReceiver();
-            frameReceiver.OnReceived += FrameReceiver_OnReceived;
+            frameReceiver = new MessageReceiver();
+            frameReceiver.OnMessage += FrameReceiver_OnReceived;
             _SocketAccepter.OnDisposed += _SocketAccepter_OnDisposed;
         }
         private void _SocketAccepter_OnDisposed(System.Exception ex)
@@ -83,7 +84,7 @@ namespace ZeroWAS.RawSocket
                 CloseSocket(ex);
             }
         }
-        private void FrameReceiver_OnReceived(IRawSocketData frame)
+        private void FrameReceiver_OnReceived(IRawSocketReceivedMessage frame)
         {
             if (_HasOnReceivedHandler)
             {
@@ -123,17 +124,17 @@ namespace ZeroWAS.RawSocket
                     _SocketAccepter.User = rSAuthResult.User;
                     _SocketAccepter.RawSocketChannelPath = _Channel.Path;
                     _Context = new Context<TUser>(_Channel, HttpRequest, _SocketAccepter, HttpServer);
-                    bool hasFrameContent = rSAuthResult.FrameContent != null && rSAuthResult.FrameContent.Length > 0;
-                    bool hasFrameRemark=!string.IsNullOrEmpty(rSAuthResult.FrameRemark);
+                    bool hasFrameContent = rSAuthResult.MessageContent != null && rSAuthResult.MessageContent.Length > 0;
+                    bool hasFrameRemark=!string.IsNullOrEmpty(rSAuthResult.MessageRemark);
                     System.IO.MemoryStream content = null;
-                    if(rSAuthResult.FrameContent != null && rSAuthResult.FrameContent.Length > 0)
+                    if(rSAuthResult.MessageContent != null && rSAuthResult.MessageContent.Length > 0)
                     {
-                        content = new System.IO.MemoryStream(rSAuthResult.FrameContent);
+                        content = new System.IO.MemoryStream(rSAuthResult.MessageContent);
                     }
                     string remark = string.Empty;
-                    if(!string.IsNullOrEmpty(rSAuthResult.FrameRemark))
+                    if(!string.IsNullOrEmpty(rSAuthResult.MessageRemark))
                     {
-                        remark = rSAuthResult.FrameRemark;
+                        remark = rSAuthResult.MessageRemark;
                     }
                     if(string.IsNullOrEmpty(remark))
                     {
@@ -142,12 +143,26 @@ namespace ZeroWAS.RawSocket
                             remark = "Authentication failed";
                         }
                     }
-                    //握手完成：
-                    using(var frame= new DataFrame { FrameType = rSAuthResult.FrameType, FrameContent = content, FrameRemark= remark })
+                    using (var frame = new SendMessage(1, new MemoryStream(Encoding.UTF8.GetBytes("ClientId="+ rsClinetId)), string.Empty))
                     {
-                        frame.ReadAll(e => {
-                            _SocketAccepter.Write(e.Data);
+                        SerializedMessage msg = new SerializedMessage(frame);
+                        msg.Take();
+                        msg.EndDispatch();
+                        msg.Read(e => {
+                            _SocketAccepter.Write(e);
                         });
+                        msg.End();
+                    }
+                    //握手完成：
+                    using (var frame= new SendMessage(1, content, remark))
+                    {
+                        SerializedMessage msg=new SerializedMessage(frame);
+                        msg.Take();
+                        msg.EndDispatch();
+                        msg.Read(e => {
+                            _SocketAccepter.Write(e);
+                        });
+                        msg.End();
                     }
                     if (!rSAuthResult.IsOk)//没有通过验证
                     {

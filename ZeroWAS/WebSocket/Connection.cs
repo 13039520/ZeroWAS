@@ -74,7 +74,7 @@ namespace ZeroWAS.WebSocket
             Handshake += "Upgrade: WebSocket" + Environment.NewLine;
             Handshake += "Connection: Upgrade" + Environment.NewLine;
             Handshake += "Sec-WebSocket-Origin: " + "{0}" + Environment.NewLine;
-            Handshake += string.Format("Sec-WebSocket-Location: " + "ws://{0}{1}" + Environment.NewLine, httpServer.HostName, channel.Path);
+            Handshake += string.Format("Sec-WebSocket-Location: " + "ws://{0}{1}" + Environment.NewLine, HttpRequest.Header["Host"], channel.Path);
             Handshake += Environment.NewLine;
 
             New_Handshake = "HTTP/1.1 101 Switching Protocols" + Environment.NewLine;

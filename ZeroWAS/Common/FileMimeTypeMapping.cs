@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace ZeroWAS.Common
 {
     public static class FileMimeTypeMapping
     {
-        private readonly static string mappingText = @"ai=application/postscript,application/pdf
+        private const string DefaultMimeType = "application/octet-stream";
+        private const string DefaultSuffix = ".tmp";
+        private const string DefaultConfig = @"ai=application/postscript,application/pdf
 evy=application/envoy
 fif=application/fractals
 spl=application/futuresplash
@@ -209,64 +212,80 @@ wrl=x-world/x-vrml
 wrz=x-world/x-vrml
 xaf=x-world/x-vrml
 xof=x-world/x-vrml";
+        private readonly static char[] mimeTypeSplitChars = new char[] { ',' };
+        private static object _lock = new object();
 
-        private static Dictionary<string, string> mapping = new Dictionary<string, string>();
-        private static bool mappingLoaded = false;
-        private static Dictionary<string, string> GetMapping()
+        private readonly static Dictionary<string, string> suffixes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private readonly static Dictionary<string, string> mimeTypes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        static FileMimeTypeMapping()
         {
-            if (mappingLoaded) { return mapping; }
-            var mc = System.Text.RegularExpressions.Regex.Matches(mappingText, @"(?<key>[a-z0-9\*]{1,10})=(?<value>[a-z0-9\*/,\-]{3,})");
+            var mc = System.Text.RegularExpressions.Regex.Matches(DefaultConfig, @"(?<key>[a-z0-9\*]{1,10})=(?<value>[a-z0-9\*/,\-\.+]+)");
             foreach (System.Text.RegularExpressions.Match m in mc)
             {
-                var key = m.Groups["key"].Value;
-                if (mapping.ContainsKey(key))
+                var key = "." + m.Groups["key"].Value;
+                var value = m.Groups["value"].Value;
+                var types= value.Split(mimeTypeSplitChars, StringSplitOptions.RemoveEmptyEntries);
+                if (types.Length < 1) { continue; }
+                key = key.ToLowerInvariant();
+                suffixes[key] = types[0].Trim();
+                foreach (var type in types)
                 {
-                    continue;
+                    var t = type.Trim();
+                    if (t.Length > 0)
+                    { mimeTypes[t] = key; }
                 }
-                mapping.Add(key, m.Groups["value"].Value);
             }
-            mappingLoaded = true;
-            return mapping;
         }
-
-        public static void AddOrUpdateMapping(string suffix,string mimeType)
+        public static void AddOrUpdateMapping(string suffix, string mimeType)
         {
-            if(string.IsNullOrEmpty(suffix)|| string.IsNullOrEmpty(mimeType)) { return; }
-            suffix = suffix.Trim().ToLower();
-            mimeType = mimeType.Trim().ToLower();
-            var dic = GetMapping();
-            if (dic.ContainsKey(suffix))
+            if(string.IsNullOrEmpty(suffix) || string.IsNullOrEmpty(mimeType)) { return; }
+            if (suffix[0] != '.') { suffix = "." + suffix; }
+            suffix = suffix.ToLowerInvariant();
+            var types = mimeType.Split(mimeTypeSplitChars, StringSplitOptions.RemoveEmptyEntries);
+            if (types.Length < 1)
             {
-                dic.Remove(suffix);
+                return;
             }
-            dic.Add(suffix, mimeType);
-        }
+            lock (_lock)
+            {
+                suffixes[suffix] = types[0].Trim();
 
-        public static void LoadFromFile(System.IO.FileInfo file)
+                foreach (var type in types)
+                {
+                    var t = type.Trim();
+                    if (t.Length > 0)
+                    { mimeTypes[t] = suffix; }
+                }
+            }
+        }
+        public static void LoadFromFile(FileInfo file)
         {
-            if (file == null || !file.Exists) { return; }
+            if (file == null || !file.Exists)
+                return;
+
             using (var reader = file.OpenText())
             {
+                string line;
                 try
                 {
-                    string line = reader.ReadLine();
-                    while (line != null)
+                    while ((line = reader.ReadLine()) != null)
                     {
-                        if (line.Length > 0 && line.IndexOf("//") != 0)
-                        {
-                            int index = line.IndexOf('=');
-                            if (index > 0 && index + 1 < line.Length)
-                            {
-                                string suffix = line.Substring(0, index).Trim();
-                                suffix = suffix.TrimStart('.');
-                                string mime = line.Substring(index + 1).Trim();
-                                if (suffix.Length > 0 && mime.Length > 0)
-                                {
-                                    AddOrUpdateMapping(suffix, mime);
-                                }
-                            }
-                        }
-                        line = reader.ReadLine();
+                        line = line.Trim();
+                        if (line.Length == 0 || line.StartsWith("//") || line.StartsWith("#"))
+                            continue;
+
+                        int comment = line.IndexOf("//");
+                        if (comment >= 0)
+                            line = line.Substring(0, comment).Trim();
+
+                        int index = line.IndexOf('=');
+                        if (index <= 0 || index + 1 >= line.Length)
+                            continue;
+
+                        string suffix = line.Substring(0, index).Trim();
+                        string mime = line.Substring(index + 1).Trim();
+
+                        AddOrUpdateMapping(suffix, mime);
                     }
                 }
                 catch { }
@@ -274,46 +293,34 @@ xof=x-world/x-vrml";
         }
         public static string GetSuffix(string mimeType)
         {
-            if (string.IsNullOrEmpty(mimeType) || string.IsNullOrEmpty(mimeType)) { return ".unknown"; }
-            var dic = GetMapping();
-            mimeType = mimeType.Trim().ToLower();
-            foreach (string key in dic.Keys)
+            if (string.IsNullOrEmpty(mimeType)) { return DefaultSuffix; }
+            
+            var index = mimeType.IndexOf(';');
+            if (index > 0){ mimeType = mimeType.Substring(0, index); }
+            mimeType = mimeType.Trim();
+
+            lock (_lock)
             {
-                string value = dic[key];
-                if (value.IndexOf(',') > -1)
+                if (mimeTypes.TryGetValue(mimeType, out var suffix))
                 {
-                    string[] values = value.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                    foreach(string s in values)
-                    {
-                        if (s == mimeType)
-                        {
-                            return "." + key;
-                        }
-                    }
-                }
-                else
-                {
-                    if (value == mimeType)
-                    {
-                        return "." + key;
-                    }
+                    return suffix;
                 }
             }
-            return ".unknown";
+            return DefaultSuffix;
         }
         public static string GetMimeType(string suffix)
         {
-            if (string.IsNullOrEmpty(suffix) || string.IsNullOrEmpty(suffix)) { return "application/unknown"; }
-            suffix = suffix.Replace(".","").Trim().ToLower();
-            if (string.IsNullOrEmpty(suffix)) { return "application/unknown"; }
-            var dic = GetMapping();
-            if (dic.ContainsKey(suffix))
+            if (string.IsNullOrEmpty(suffix)) { return DefaultMimeType; }
+            if (suffix[0] != '.') { suffix = "." + suffix; }
+            lock (_lock)
             {
-                return dic[suffix];
+                if (suffixes.TryGetValue(suffix, out var mimeType))
+                {
+                    return mimeType;
+                }
             }
-            return "application/unknown";
+            return DefaultMimeType;
         }
-
 
     }
 }

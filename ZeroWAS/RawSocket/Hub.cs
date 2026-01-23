@@ -9,7 +9,7 @@ namespace ZeroWAS.RawSocket
         static object _channelsLock = new object();
         static List<IRawSocketChannel<TUser>> channels = new List<IRawSocketChannel<TUser>>();
         static object _queueLock = new object();
-        static Queue<PushTask<TUser>> queue = new Queue<PushTask<TUser>>();
+        static Queue<IRawSocketPushTask<TUser>> queue = new Queue<IRawSocketPushTask<TUser>>();
         System.Threading.Thread thread = null;
         bool hasChannel = false;
 
@@ -94,10 +94,10 @@ namespace ZeroWAS.RawSocket
             }
             return null;
         }
-        public void AddPushTask(PushTask<TUser> task)
+        public void AddPushTask(IRawSocketPushTask<TUser> task)
         {
             if (!HasChannel) { return; }
-            if (task != null && task.Accepter != null && task.Accepter.SocketType == Common.SocketTypeEnum.RawSocket)
+            if (task != null && task.Accepters != null && task.Accepters.Count>0)
             {
                 lock (_queueLock)
                 {
@@ -106,7 +106,7 @@ namespace ZeroWAS.RawSocket
             }
         }
 
-        public void SendData(IRawSocketData data)
+        public void SendData(IRawSocketSendMessage data)
         {
             lock (_channelsLock)
             {
@@ -123,7 +123,7 @@ namespace ZeroWAS.RawSocket
                 }
             }
         }
-        public void SendData(IRawSocketData data, TUser toUser)
+        public void SendData(IRawSocketSendMessage data, TUser toUser)
         {
             lock (_channelsLock)
             {
@@ -140,7 +140,7 @@ namespace ZeroWAS.RawSocket
                 }
             }
         }
-        public void SendData(IRawSocketData data, TUser toUser, IRawSocketChannel<TUser> toChannel)
+        public void SendData(IRawSocketSendMessage data, TUser toUser, IRawSocketChannel<TUser> toChannel)
         {
             if (toChannel == null) { return; }
             lock (_channelsLock)
@@ -162,7 +162,7 @@ namespace ZeroWAS.RawSocket
                 }
             }
         }
-        public void SendData(IRawSocketData data, IRawSocketChannel<TUser> toChannel)
+        public void SendData(IRawSocketSendMessage data, IRawSocketChannel<TUser> toChannel)
         {
             if (toChannel == null) { return; }
             lock (_channelsLock)
@@ -184,7 +184,7 @@ namespace ZeroWAS.RawSocket
                 }
             }
         }
-        public void SendData(IRawSocketData data, IRawSocketChannel<TUser> toChannel, TUser toUser)
+        public void SendData(IRawSocketSendMessage data, IRawSocketChannel<TUser> toChannel, TUser toUser)
         {
             if (toChannel == null) { return; }
             lock (_channelsLock)
@@ -221,7 +221,7 @@ namespace ZeroWAS.RawSocket
                 try
                 {
 
-                    PushTask<TUser> task = null;
+                    IRawSocketPushTask<TUser> task = null;
                     lock (_queueLock)
                     {
                         if (queue.Count > 0)
@@ -244,16 +244,30 @@ namespace ZeroWAS.RawSocket
                 System.Threading.Thread.Sleep(sleep);
             }
         }
-        private void Send(PushTask<TUser> task)
+        private void Send(IRawSocketPushTask<TUser> task)
         {
             try
             {
-                task.Content.ReadAll((e) => {
-                    task.Accepter.Write(e.Data);
+                task.Content.Read(bytes =>
+                {
+                    for (int i = task.Accepters.Count - 1; i >= 0; i--)
+                    {
+                        var item = task.Accepters[i];
+                        try
+                        {
+                            item.Write(bytes);
+                        }
+                        catch
+                        {
+                            task.Accepters.RemoveAt(i);
+                            // Console.WriteLine("被移出");
+                        }
+                    }
                 });
             }
-            catch(Exception ex) {
-                Console.WriteLine("【RawSocket发送时异常】Message={0}&TargetSite={1}&StackTrace=\r\n{2}", ex.Message, ex.TargetSite, ex.StackTrace);
+            finally
+            {
+                task.Content.End();
             }
         }
 

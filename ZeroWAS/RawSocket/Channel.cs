@@ -18,43 +18,58 @@ namespace ZeroWAS.RawSocket
             this.hub = hub;
         }
 
-        public void AddPushTask(PushTask<TUser> task)
+        public void AddPushTask(IRawSocketPushTask<TUser> task)
         {
             hub.AddPushTask(task);
         }
-        public void SendToCurrentChannel(IRawSocketData data) {
+        public void SendToCurrentChannel(IRawSocketSendMessage data) {
+            List<IHttpConnection<TUser>> clients = new List<IHttpConnection<TUser>>();
+            var serializedMessage = new SerializedMessage(data);
             Common.SocketManager<TUser>.ForeachRS(new Common.SocketManager<TUser>.ForeachHeadler((accepter) => {
-                if (accepter.RawSocketChannelPath == this.Path)
+                if (accepter.RawSocketChannelPath.Equals(this.Path, StringComparison.OrdinalIgnoreCase))
                 {
-                    AddPushTask(new PushTask<TUser> { Content = data, Accepter = accepter });
+                    clients.Add(accepter);
+                    serializedMessage.Take();
                 }
                 return true;//继续
             }));
+            if (clients.Count > 0)
+            {
+                AddPushTask(new PushTask<TUser> { Accepters = clients, Content = serializedMessage });
+            }
+            serializedMessage.EndDispatch();
         }
-        public void SendToCurrentChannel(IRawSocketData data, TUser toUser) {
-            Common.SocketManager<TUser>.ForeachRS(new Common.SocketManager<TUser>.ForeachHeadler((accepter) => {
-                if (accepter.User.Equals(toUser) && accepter.RawSocketChannelPath == this.Path)
+        public void SendToCurrentChannel(IRawSocketSendMessage data, TUser toUser) {
+            List<IHttpConnection<TUser>> clients = new List<IHttpConnection<TUser>>();
+            var serializedMessage = new SerializedMessage(data);
+            Common.SocketManager<TUser>.ForeachRS((accepter) => {
+                if (accepter.User.Equals(toUser) && accepter.RawSocketChannelPath.Equals(this.Path, StringComparison.OrdinalIgnoreCase))
                 {
-                    AddPushTask(new PushTask<TUser> { Content= data, Accepter = accepter });
-                    //return false;//不能中断：因为会存在 一个用户 在 不同地方 登录了同一个频道
+                    clients.Add(accepter);
+                    serializedMessage.Take();
                 }
-                return true;//继续
-            }));
+                return true;//不能中断：因为会存在 一个用户 在 不同地方 登录了同一个频道
+            });
+            if (clients.Count > 0)
+            {
+                AddPushTask(new PushTask<TUser> { Accepters = clients, Content = serializedMessage });
+            }
+            serializedMessage.EndDispatch();
         }
 
-        public void SendToHub(IRawSocketData data) {
+        public void SendToHub(IRawSocketSendMessage data) {
             hub.SendData(data);
         }
-        public void SendToHub(IRawSocketData data, TUser toUser) {
+        public void SendToHub(IRawSocketSendMessage data, TUser toUser) {
             hub.SendData(data, toUser);
         }
-        public void SendToHub(IRawSocketData data, TUser toUser, IRawSocketChannel<TUser> toChannel) {
+        public void SendToHub(IRawSocketSendMessage data, TUser toUser, IRawSocketChannel<TUser> toChannel) {
             hub.SendData(data, toUser, toChannel);
         }
-        public void SendToHub(IRawSocketData data, IRawSocketChannel<TUser> toChannel) {
+        public void SendToHub(IRawSocketSendMessage data, IRawSocketChannel<TUser> toChannel) {
             hub.SendData(data, toChannel);
         }
-        public void SendToHub(IRawSocketData data, IRawSocketChannel<TUser> toChannel, TUser toUser) {
+        public void SendToHub(IRawSocketSendMessage data, IRawSocketChannel<TUser> toChannel, TUser toUser) {
             hub.SendData(data, toChannel, toUser);
         }
 

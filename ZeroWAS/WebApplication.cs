@@ -17,7 +17,8 @@ namespace ZeroWAS
         private int _ListenPort = 5002;
         public string ListenIP { get; set; }
         public int ListenPort { get { return _ListenPort; } set { if (value > 0 && value < 65535) { _ListenPort = value; } } }
-        public string HostName { get; set; }
+        private string _HostName = "*";
+        public string HostName { get { return _HostName; } set { _HostName = value; } }
         public IEnumerable<string> CrossOrigins { get; set; }
         public string PFXCertificateFilePath { get; set; }
         public string PFXCertificatePassword { get; set; }
@@ -27,7 +28,6 @@ namespace ZeroWAS
             set { _X509Cer = value; }
         }
         public bool UseHttps { get; set; }
-        public Uri HomePageUri { get; set; }
         public string ServerName { get; set; }
         public int HttpConnectionMax { get; set; }
         public int WSConnectionMax { get; set; }
@@ -75,7 +75,7 @@ namespace ZeroWAS
             HttpMaxURILength = short.MaxValue;//默认32767
             HttpMaxContentLength = 4194304;//默认4M
             UseHttps = false;
-            HomePageUri = new Uri(string.Format("http://{0}:{1}/{2}", ListenIP, ListenPort, SiteDefaultFile[0]));
+
         }
 
         public string MapPath(string vPath)
@@ -198,17 +198,16 @@ namespace ZeroWAS
         public void AddService(Type serviceType, object serviceInstance)
         {
             if(serviceInstance == null) { return; }
-            if (_services.ContainsKey(serviceType)) { return; }
             lock (_servicesLock)
             {
-                if (_services.ContainsKey(serviceType)) { return; }
-                _services.Add(serviceType, serviceInstance);
+                _services[serviceType] = serviceInstance;
             }
         }
         public object GetService(Type serviceType)
         {
-            if (_services.ContainsKey(serviceType)) { return _services[serviceType]; }
-            return null;
+            object obj = null;
+            _services.TryGetValue(serviceType, out obj);
+            return obj;
         }
 
 
@@ -491,15 +490,9 @@ namespace ZeroWAS
             {
                 reval.ListenPort = ListenPort;
             }
-            string _hostname = System.Net.Dns.GetHostName();
-            System.Net.IPAddress[] ipadrlist = System.Net.Dns.GetHostAddresses(_hostname);
             if (string.IsNullOrEmpty(HostName))
             {
-                HostName = ipIsLocalhostChars ? "localhost" : (reval.ListenIP != "0.0.0.0" ? reval.ListenIP : "127.0.0.1");
-                if (reval.ListenPort != 80)
-                {
-                    HostName += ":" + reval.ListenPort;
-                }
+                HostName = "*";
             }
             reval.HostName = HostName;
             if (!string.IsNullOrEmpty(ServerName) && System.Text.RegularExpressions.Regex.IsMatch(ServerName, @"^[a-zA-Z0-9_\-]{1,50}$"))
@@ -600,6 +593,9 @@ namespace ZeroWAS
             }
             else
             {
+                string _hostname = System.Net.Dns.GetHostName();
+                System.Net.IPAddress[] ipadrlist = System.Net.Dns.GetHostAddresses(_hostname);
+
                 string lastIpPort = "localhost" + (ListenPort != 80 ? ":" + ListenPort : "");
                 string origin = (reval.UseHttps ? "https" : "http") + "://" + lastIpPort;
                 if (lastIpPort != HostName && null == crossOrigins.Find(o => string.Equals(o, origin, StringComparison.OrdinalIgnoreCase)))
@@ -630,32 +626,7 @@ namespace ZeroWAS
             }
             reval.CrossOrigins = crossOrigins.ToArray();
 
-            SetHomePageUrl(ref reval);
-
             return reval;
-        }
-
-        private static void SetHomePageUrl(ref WebApplication app)
-        {
-            StringBuilder url = new StringBuilder(app.UseHttps ? "https" : "http");
-            if (app.ListenIP == "*" || app.ListenIP == "0.0.0.0")
-            {
-                url.Append("://127.0.0.1");
-            }
-            else
-            {
-                url.AppendFormat("://{0}", app.ListenIP);
-            }
-            if (app.ListenPort != 80)
-            {
-                url.AppendFormat(":{0}", app.ListenPort);
-            }
-            url.Append("/");
-            if(app.SiteDefaultFile.Length > 0)
-            {
-                url.Append(app.SiteDefaultFile[0]);
-            }
-            app.HomePageUri=new Uri(url.ToString());
         }
 
     }

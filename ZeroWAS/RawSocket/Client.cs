@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 
 namespace ZeroWAS.RawSocket
 {
-    public class Client : IDisposable
+    public sealed class Client : IDisposable
     {
         public class ConnectErrorEventArgs : EventArgs
         {
@@ -19,7 +20,7 @@ namespace ZeroWAS.RawSocket
         }
         public delegate void ConnectErrorHandler(ConnectErrorEventArgs e);
         public delegate void ConnectedHandler();
-        public delegate void ReceivedHandler(IRawSocketData data);
+        public delegate void ReceivedHandler(IRawSocketReceivedMessage data);
         public delegate void DisconnectHandler(Exception ex);
 
         public ConnectErrorHandler OnConnectErrorHandler { get; set; }
@@ -29,7 +30,7 @@ namespace ZeroWAS.RawSocket
         /// <summary>
         /// 客户端标识编号(连接成功后才是有效编号)
         /// </summary>
-        public long ClinetId { get { return clinetId; } }
+        public long ClientId { get { return clientId; } }
 
 
         System.Net.IPAddress IPAddress = null;
@@ -37,16 +38,21 @@ namespace ZeroWAS.RawSocket
         System.Net.IPEndPoint point = null;
         System.Net.Sockets.Socket socket = null;
         bool noDelay = false;
-        bool isDisposed = false;
+        /// <summary>
+        /// 释放状态：0 running 1 disposed
+        /// </summary>
+        int _disposed = 0;
         bool isConnencted = false;
-        long clinetId = 0;
+        long clientId = 0;
         System.Exception lastException = null;
-        System.Uri TargetURI = null;
+        readonly System.Uri TargetURI = null;
+        Dictionary<byte, ReceivedHandler> receivedHandlers = new Dictionary<byte, ReceivedHandler>();
+        private readonly object _handlerLock = new object();
 
         /// <summary>
         /// 连接成功标识
         /// </summary>
-        public bool IsConnencted { get { return isConnencted; } }
+        public bool IsConnected { get { return isConnencted; } }
 
         public Client(System.Uri uri)
         {
@@ -91,12 +97,11 @@ namespace ZeroWAS.RawSocket
         void _connect()
         {
         Conn:
-            if (isConnencted || isDisposed) { return; }
+            if (isConnencted || _disposed == 1) { return; }
             Exception error = null;
             try
             {
                 socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
-                //Console.WriteLine("连接：{0}:{1}", IPAddress, Port);
                 var result = socket.BeginConnect(point, null, null);
                 bool success = result.AsyncWaitHandle.WaitOne(5000, true);
                 if (success)
@@ -156,18 +161,14 @@ namespace ZeroWAS.RawSocket
                 Disconnect();
             }
         }
-        bool isFirst = true;
-        bool hasOnReceivedHandler = false;
-        void ReceiveData()
+        int isFirst = 1;
+        private void ReceiveData()
         {
-            IDataFrameReceiver receiver = new DataFrameReceiver();
-            receiver.OnReceived += Receiver_OnReceived;
-            hasOnReceivedHandler = OnReceivedHandler != null;
-            isFirst = true;
-            int len = 2048;
+            MessageReceiver receiver = new MessageReceiver();
+            receiver.OnMessage += Receiver_OnMessage;
+            int len = 4096;
             while (isConnencted)
             {
-
                 byte[] buffer = new byte[len];
                 int bound = 0;
                 try
@@ -177,26 +178,7 @@ namespace ZeroWAS.RawSocket
                     {
                         throw new Exception("0字节");
                     }
-                }
-                catch (Exception ex)
-                {
-                    lastException = ex;
-                    Disconnect();
-                    break;
-                }
-                byte[] real;
-                if (bound < len)
-                {
-                    real = new byte[bound];
-                    Array.Copy(buffer, real, bound);
-                }
-                else
-                {
-                    real = buffer;
-                }
-                try
-                {
-                    receiver.Receive(real);
+                    receiver.Receive(buffer, 0, bound);
                 }
                 catch (Exception ex)
                 {
@@ -206,52 +188,91 @@ namespace ZeroWAS.RawSocket
                 }
             }
         }
-        private void Receiver_OnReceived(IRawSocketData frame)
+        private void Receiver_OnMessage(ReceivedMessage obj)
         {
-            if (isFirst)
+            try
             {
-                isFirst = false;
-                if (OnConnectedHandler != null)
+                // 首包逻辑
+                if (Interlocked.Exchange(ref isFirst, 0) == 1)
                 {
+                    if (obj.Type == 1)
+                    {
+                        string s = obj.ReadContentAsString(Encoding.UTF8);
+                        if (s.StartsWith("ClientId="))
+                        {
+                            s = s.Substring(8);
+                            if (s.Length > 0 && !long.TryParse(obj.Remark, out clientId))
+                            {
+                                clientId = -1;
+                            }
+                        }
+                    }
+
                     try
                     {
-                        OnConnectedHandler();
+                        OnConnectedHandler?.Invoke();
                     }
                     catch { }
                 }
-            }
-            if (hasOnReceivedHandler)
-            {
+
+                // 专用 handler
+                if (TryGetReceivedHandler(obj.Type, out var handler))
+                {
+                    try
+                    {
+                        handler(obj);
+                    }
+                    catch { }
+                    return;
+                }
+
+                // 通用 handler
                 try
                 {
-                    OnReceivedHandler(frame);
+                    OnReceivedHandler?.Invoke(obj);
                 }
                 catch { }
             }
-            frame.Dispose();
+            finally
+            {
+                obj.Dispose();
+            }
         }
-
         private void HttpUpgrade()
         {
             string data = "GET " + TargetURI.PathAndQuery + " HTTP/1.1\r\n"
+                + "Host:" + TargetURI.Authority + "\r\n"
                 + "Upgrade:rawsocket\r\n\r\n";
             byte[] buffer = System.Text.Encoding.UTF8.GetBytes(data);
             socket.Send(buffer, buffer.Length, System.Net.Sockets.SocketFlags.None);
         }
-        public bool SendData(IRawSocketData data)
+
+        private object _sendLock = new object();
+        public bool SendData(IRawSocketSendMessage data, bool autoDispose = true)
         {
-            if (IsConnencted)
+            bool reval = false;
+            if (IsConnected)
             {
-                data.ReadAll(e => {
-                    socket.Send(e.Data, e.Data.Length, System.Net.Sockets.SocketFlags.None);
-                    if (e.IsEnd)
+                SerializedMessage serializedMessage = new SerializedMessage(data);
+                try
+                {
+                    serializedMessage.Take();
+                    serializedMessage.EndDispatch();
+                    lock (_sendLock)
                     {
-                        data.Dispose();
+                        serializedMessage.Read((bytes) =>
+                        {
+                            socket.Send(bytes, bytes.Length, System.Net.Sockets.SocketFlags.None);
+                        });
                     }
-                });
-                return true;
+                }
+                finally {
+                    serializedMessage.End();
+                }
+                reval = true;
             }
-            return false;
+            if (autoDispose) { data.Dispose(); }
+            return reval;
         }
         public void Connect()
         {
@@ -261,7 +282,7 @@ namespace ZeroWAS.RawSocket
         {
             if (!isConnencted) { return; }
             isConnencted = false;
-            clinetId = 0;
+            clientId = 0;
             socket.Close();
             if (OnDisconnectHandler != null)
             {
@@ -272,31 +293,49 @@ namespace ZeroWAS.RawSocket
                 catch { }
             }
         }
-
         public void Dispose()
         {
-            Dispose(true);
-        }
-        protected void Dispose(bool dispoing)
-        {
-            if (isDisposed) { return; }
-            isDisposed = true;
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) { return; }
             isConnencted = false;
-            clinetId = 0;
-            if (dispoing)
+            clientId = 0;
+            if (socket != null)
             {
                 try
                 {
-                    if (socket != null)
-                    {
-                        socket.Close();
-                    }
+                    socket.Close();
+                    socket = null;
                 }
                 catch { }
             }
         }
 
-
+        public bool ReceivedHandleRegister(byte type, ReceivedHandler handler, bool overwrite = true)
+        {
+            if (handler == null) { return false; }
+            lock (_handlerLock)
+            {
+                if (!overwrite && receivedHandlers.TryGetValue(type, out _))
+                {
+                    return false;
+                }
+                receivedHandlers[type] = handler;
+                return true;
+            }
+        }
+        public bool ReceivedHandleRemove(byte type)
+        {
+            lock (_handlerLock)
+            {
+                return receivedHandlers.Remove(type);
+            }
+        }
+        private bool TryGetReceivedHandler(byte type, out ReceivedHandler handler)
+        {
+            lock (_handlerLock)
+            {
+                return receivedHandlers.TryGetValue((byte)type, out handler);
+            }
+        }
 
     }
 }

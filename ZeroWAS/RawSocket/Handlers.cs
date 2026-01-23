@@ -8,7 +8,7 @@ namespace ZeroWAS.RawSocket
     {
         public delegate AuthResult<TUser> ConnectedHandler(IWebApplication server, IHttpRequest req, string channelPath, long clientId);
         public delegate void DisconnectedHandler(IRawSocketContext<TUser> context, Exception ex);
-        public delegate void ReceivedHandler(IRawSocketContext<TUser> context, IRawSocketData data);
+        public delegate void ReceivedHandler(IRawSocketContext<TUser> context, IRawSocketReceivedMessage data);
 
         public ConnectedHandler OnConnectedHandler { get; set; }
         public DisconnectedHandler OnDisconnectedHandler { get; set; }

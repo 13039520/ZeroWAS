@@ -12,8 +12,8 @@ namespace ZeroWAS
         IRawSocketChannel<TUser> Channel { get; }
         IWebApplication Server { get; }
         object GetService(Type serviceType);
-        void SendData(IRawSocketData data);
-        void SendData(IRawSocketData data, TUser toWSUser);
+        void SendData(IRawSocketSendMessage data);
+        void SendData(IRawSocketSendMessage data, TUser toRSUser);
 
         void Disconnected();
         void Disconnected(Exception ex);

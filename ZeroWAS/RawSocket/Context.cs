@@ -34,11 +34,11 @@ namespace ZeroWAS.RawSocket
             _Server = server;
         }
 
-        public void SendData(IRawSocketData data)
+        public void SendData(IRawSocketSendMessage data)
         {
             Channel.SendToCurrentChannel(data);
         }
-        public void SendData(IRawSocketData data, TUser toUser)
+        public void SendData(IRawSocketSendMessage data, TUser toUser)
         {
             Channel.SendToCurrentChannel(data, toUser);
         }

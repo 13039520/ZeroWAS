@@ -14,6 +14,8 @@ namespace ZeroWAS.Http
         public string Path { get; set; }
         public Uri URI { get; set; }
         public string HttpVersion { get; set; }
+        public int HttpVersionNumber { get; set; }
+        public string HostName { get; set; }
         public string UserAgent { get; set; }
         public string UserRemoteAddress { get; set; }
         public string UserRemotePort { get; set; }

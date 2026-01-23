@@ -9,16 +9,16 @@ namespace ZeroWAS
         string Path { get; }
         IRawSocketHandlers<TUser> Handlers { get; set; }
 
-        void AddPushTask(RawSocket.PushTask<TUser> task);
+        void AddPushTask(IRawSocketPushTask<TUser> task);
 
-        void SendToCurrentChannel(IRawSocketData data);
-        void SendToCurrentChannel(IRawSocketData data, TUser toUser);
+        void SendToCurrentChannel(IRawSocketSendMessage data);
+        void SendToCurrentChannel(IRawSocketSendMessage data, TUser toUser);
 
-        void SendToHub(IRawSocketData data);
-        void SendToHub(IRawSocketData data, TUser toUser);
-        void SendToHub(IRawSocketData data, TUser toUser, IRawSocketChannel<TUser> toChannel);
-        void SendToHub(IRawSocketData data, IRawSocketChannel<TUser> toChannel);
-        void SendToHub(IRawSocketData data, IRawSocketChannel<TUser> toChannel, TUser toUser);
+        void SendToHub(IRawSocketSendMessage data);
+        void SendToHub(IRawSocketSendMessage data, TUser toUser);
+        void SendToHub(IRawSocketSendMessage data, TUser toUser, IRawSocketChannel<TUser> toChannel);
+        void SendToHub(IRawSocketSendMessage data, IRawSocketChannel<TUser> toChannel);
+        void SendToHub(IRawSocketSendMessage data, IRawSocketChannel<TUser> toChannel, TUser toUser);
 
         void DisconnectedUsers();
         void DisconnectedUser(TUser user);

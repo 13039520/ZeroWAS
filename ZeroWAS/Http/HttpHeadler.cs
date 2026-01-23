@@ -9,9 +9,12 @@ namespace ZeroWAS.Http
     {
         private string _Key = "";
         public string Key { get { return _Key; } }
-        public System.Text.RegularExpressions.Regex CompiledRegex { get; }
+        public string[] Suffixes { get; }
+        public string ExactPath { get; }
+        public string PrefixPath { get; }
+        public Regex CompiledRegex { get; }
 
-        public HttpHeadler(string handlerKey, string pathAndQueryPattern, System.Text.RegularExpressions.RegexOptions regexOptions= System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+        public HttpHeadler(string handlerKey, string pathAndQueryPattern, RegexOptions regexOptions= RegexOptions.IgnoreCase)
         {
             if (!string.IsNullOrEmpty(handlerKey))
             {
@@ -21,7 +24,38 @@ namespace ZeroWAS.Http
             {
                 throw new ArgumentException(nameof(pathAndQueryPattern));
             }
-            CompiledRegex= new System.Text.RegularExpressions.Regex(pathAndQueryPattern, regexOptions|System.Text.RegularExpressions.RegexOptions.Compiled);
+            CompiledRegex= new Regex(pathAndQueryPattern, regexOptions | RegexOptions.Compiled);
+        }
+        public HttpHeadler(string handlerKey, string[] suffixes)
+        {
+            if (!string.IsNullOrEmpty(handlerKey))
+            {
+                _Key = handlerKey;
+            }
+            if(suffixes==null || suffixes.Length < 1)
+            {
+                throw new ArgumentException(nameof(suffixes));
+            }
+            Suffixes = suffixes;
+        }
+        public HttpHeadler(string handlerKey, string path, bool isPrefixPath)
+        {
+            if (!string.IsNullOrEmpty(handlerKey))
+            {
+                _Key = handlerKey;
+            }
+            if (string.IsNullOrEmpty(path))
+            {
+                throw new ArgumentException(nameof(path));
+            }
+            if (isPrefixPath)
+            {
+                PrefixPath = path;
+            }
+            else
+            {
+                ExactPath = path;
+            }
         }
 
         public virtual void ProcessRequest(IHttpContext context)

@@ -3,7 +3,6 @@ ListenPort=6005
 //https(tls1.2)
 //PFXCertificateFilePath=@AppBaseDir/localhost.pfx
 //PFXCertificatePassword=12345
-
 //bytes
 HttpLargeFileOutputThreshold=4194304
 //bytes
