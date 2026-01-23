@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using ZeroWAS.Http;
 using ZeroWAS.RawSocket;
 
 namespace ZeroWAS
 {
     public class WebServer<TUser> : IWebServer<TUser>
     {
-        private List<IHttpHandler> _HttpHandler = new List<IHttpHandler>();
-        private static object _HttpHandlerLock = new object();
+        //private List<IHttpHandler> _HttpHandler = new List<IHttpHandler>();
+        //private static object _HttpHandlerLock = new object();
         private long clinetId = 0;
         private static object clinetIdLock = new object();
         private int _backlog;
@@ -22,6 +23,7 @@ namespace ZeroWAS
         private IWebSocketHub<TUser> _WebSocketHub = new WebSocket.Hub<TUser>();
         private IRawSocketHub<TUser> _RawSocketHub = new RawSocket.Hub<TUser>();
         private System.Security.Cryptography.X509Certificates.X509Certificate2 _x509Cer = null;
+        private Http.HttpHandlerDispatcher _httpHandlerDispatcher = null;
 
         public IWebSocketHub<TUser> WebSocketHub { get { return _WebSocketHub; } }
         public IRawSocketHub<TUser> RawSocketHub { get { return _RawSocketHub; } }
@@ -47,6 +49,8 @@ namespace ZeroWAS
                 _x509Cer = httpServer.X509Cer;
             }
             _listenSocket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+
+            _httpHandlerDispatcher = new Http.HttpHandlerDispatcher();
         }
 
         public void ListenStart()
@@ -136,69 +140,59 @@ namespace ZeroWAS
                     bool isCompleted = receiver.Receive(bytes);
                     if (isCompleted)
                     {
-                        connection.HttpRequestCount++;
-                        connection.LastActivityTime = DateTime.Now;
-
                         IHttpRequest req = receiver.RequestData;
                         receiver.RequestData = null;
-
-                        #region -- 升级成WebSocket --
-                        if (req.Method == "GET" && req.Header["Upgrade"] == "websocket" && WebSocketHub.HasChannel)
+                        if (HostMatcher.Match(req.HostName, _WebApp.HostName))
                         {
-                            string uri = req.URI.AbsolutePath;
-                            int index = uri.IndexOf('?');
-                            if (index > 0)
+                            connection.HttpRequestCount++;
+                            connection.LastActivityTime = DateTime.Now;
+                            #region -- 升级成WebSocket --
+                            if (req.Method == "GET" && req.Header["Upgrade"] == "websocket" && WebSocketHub.HasChannel)
                             {
-                                uri = uri.Substring(0, index);
+                                string uri = req.URI.AbsolutePath;
+                                int index = uri.IndexOf('?');
+                                if (index > 0)
+                                {
+                                    uri = uri.Substring(0, index);
+                                }
+                                var channel = WebSocketHub.ChannelSerach(uri);
+                                if (channel != null)
+                                {
+                                    Common.SocketManager<TUser>.UpgradeWebSocket(connection, _WebApp, channel, req);
+                                    req.Dispose();
+                                    return;
+                                }
                             }
-                            var channel = WebSocketHub.ChannelSerach(uri);
-                            if (channel != null)
+                            if (req.Method == "GET" && req.Header["Upgrade"] == "rawsocket" && RawSocketHub.HasChannel)
                             {
-                                Common.SocketManager<TUser>.UpgradeWebSocket(connection, _WebApp, channel, req);
-                                req.Dispose();
-                                return;
+                                string uri = req.URI.AbsolutePath;
+                                int index = uri.IndexOf('?');
+                                if (index > 0)
+                                {
+                                    uri = uri.Substring(0, index);
+                                }
+                                var channel = RawSocketHub.ChannelSerach(uri);
+                                if (channel != null)
+                                {
+                                    Common.SocketManager<TUser>.UpgradeRawSocket(connection, _WebApp, channel, req);
+                                    req.Dispose();
+                                    return;
+                                }
                             }
-                        }
-                        if (req.Method == "GET" && req.Header["Upgrade"] == "rawsocket" && RawSocketHub.HasChannel)
-                        {
-                            string uri = req.URI.AbsolutePath;
-                            int index = uri.IndexOf('?');
-                            if (index > 0)
-                            {
-                                uri = uri.Substring(0, index);
-                            }
-                            var channel = RawSocketHub.ChannelSerach(uri);
-                            if (channel != null)
-                            {
-                                Common.SocketManager<TUser>.UpgradeRawSocket(connection, _WebApp, channel, req);
-                                req.Dispose();
-                                return;
-                            }
-                        }
-                        #endregion
+                            #endregion
 
-                        ProcessHttpRequest(connection, req);
+                            ProcessHttpRequest(connection, req);
+                        }
+                        else
+                        {
+                            ProcessError(connection, req, Status.Misdirected_Request, "Host mismatch.");
+                            isError = true;
+                        }
                     }
                     else
                     {
-                        if (receiver.ReceiveErrorHttpStatus != Http.Status.Continue)//接收分析时发生错误
-                        {
-                            var req = receiver.RequestData;
-                            if (req == null)
-                            {
-                                req = new Http.Request();
-                            }
-                            //输出错误
-                            using (var res = new Http.Response<TUser>(connection, _WebApp, req, _hasResponseEndHandler, ResposeEnd))
-                            {
-                                res.StatusCode = receiver.ReceiveErrorHttpStatus;
-                                res.ContentType = "text/plain; charset=utf-8";
-                                byte[] error = Encoding.UTF8.GetBytes(string.IsNullOrEmpty(receiver.ReceiveErrorMsg) ? "未知错误" : receiver.ReceiveErrorMsg);
-                                res.Write(error);
-                                res.End();
-                            }
-                            isError = true;
-                        }
+                        ProcessError(connection, receiver.RequestData, receiver.ReceiveErrorHttpStatus, receiver.ReceiveErrorMsg);
+                        isError = true;
                     }
                     break;
             }
@@ -207,6 +201,17 @@ namespace ZeroWAS
             if (isError)
             {
                 connection.Dispose();
+            }
+        }
+        void ProcessError(IHttpConnection<TUser> connection, IHttpRequest request, Http.Status status, string errorMsg)
+        {
+            using (var res = new Http.Response<TUser>(connection, _WebApp, request, _hasResponseEndHandler, ResposeEnd))
+            {
+                res.StatusCode = status;
+                res.ContentType = "text/plain; charset=utf-8";
+                byte[] error = Encoding.UTF8.GetBytes(string.IsNullOrEmpty(errorMsg) ? "未知错误" : errorMsg);
+                res.Write(error);
+                res.End();
             }
         }
         void ProcessHttpRequest(IHttpConnection<TUser> connection, IHttpRequest req)
@@ -300,35 +305,13 @@ namespace ZeroWAS
         
         public void AddHttpHandler(IHttpHandler handler)
         {
-            if (handler == null || string.IsNullOrEmpty(handler.Key)) { return; }
-            lock (_HttpHandlerLock)
-            {
-                int count = _HttpHandler.Count;
-                int index = 0;
-                while (index < count)
-                {
-                    if (string.Equals(handler.Key, _HttpHandler[index].Key, StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        return;
-                    }
-                    index++;
-                }
-                _HttpHandler.Add(handler);
-            }
+            _httpHandlerDispatcher.Register(handler);
         }
         public IHttpHandler FindHttpHandler(IHttpRequest req)
         {
             string path = req.URI.PathAndQuery;
-            foreach (var h in _HttpHandler) {
-                if (h.CompiledRegex.IsMatch(path))
-                {
-                    return h;
-                }
-            }
-            return null;
+            return _httpHandlerDispatcher.Dispatch(path);
         }
-
-
         public void Dispose()
         {
             if (_isDisposed) { return; }

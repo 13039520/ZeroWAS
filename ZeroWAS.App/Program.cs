@@ -18,7 +18,7 @@ namespace ZeroWAS.App
             Console.CancelKeyPress += Console_CancelKeyPress;
             if (ZeroWASInit())
             {
-                RawSocketClientInit(1);
+                //RawSocketClientInit(1);
                 //WebSocketClientInit(5);
                 Console.WriteLine("HostName=>{0}", webServer.WebApp.HostName);
                 while (true)
@@ -41,7 +41,7 @@ namespace ZeroWAS.App
         static bool isRawSocketClientInit = false;
         static void RawSocketClientInit(int uid)
         {
-            rawSocketClient = new RawSocket.Client(new Uri("http://" + webServer.WebApp.HostName + "/RawSocket?uid=" + uid));
+            rawSocketClient = new RawSocket.Client(new Uri("http://127.0.0.1:6005/RawSocket?uid=" + uid));
             rawSocketClient.OnConnectErrorHandler = (e) => {
                 Console.WriteLine(e.SocketException.Message);
                 e.Retry = true;
@@ -84,7 +84,7 @@ namespace ZeroWAS.App
         }
         static void WebSocketClientInit(int uid)
         {
-            webSocketClient = new WebSocket.Client(new Uri("ws://" + webServer.WebApp.HostName + "/WebSocket?uid=" + uid));
+            webSocketClient = new WebSocket.Client(new Uri("ws://127.0.0.1:6005/WebSocket?uid=" + uid));
             webSocketClient.OnConnectErrorHandler = (e) => {
                 Console.WriteLine(e.SocketException.Message);
                 e.Retry = true;
@@ -131,8 +131,8 @@ namespace ZeroWAS.App
             webServer = new ZeroWAS.WebServer<string>(3000, ZeroWAS.WebApplication.FromFile(config));
             webServer.WebApp.AddService(typeof(UserService), new UserService());
             
-            /*
-            webServer.AddHttpHandler(new CustomHttpHandler("ImageHandler",@"^/.+\.(jpg|png|gif|bmp|webp)\b", (context) =>
+            
+            webServer.AddHttpHandler(new HttpHandlers.SuffixHttpHandler("ImageHandler",new string[] {".jpg",".jpeg",".png", ".gif", ".webp" }, (context) =>
             {
                 System.IO.FileInfo fileInfo = context.Server.GetStaticFile(context.Request.URI.AbsolutePath);
                 if (fileInfo != null)
@@ -146,8 +146,6 @@ namespace ZeroWAS.App
                 }
                 context.Response.End();
             }));
-            */
-
             //http request with missing handler
             webServer.WebApp.OnRequestReceivedHandler = (context) =>
             {
@@ -273,22 +271,6 @@ namespace ZeroWAS.App
                 return false;
             }
         }
-        static void OpenUrl(string url)
-        {
-            try
-            {
-                var psi = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = url,
-                    UseShellExecute = true
-                };
-                System.Diagnostics.Process.Start(psi);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error=>{0}",e.Message);
-            }
-        }
 
         class UserService
         {
@@ -336,30 +318,6 @@ namespace ZeroWAS.App
                 return string.Empty;
             }
         }
-
-        public class CustomHttpHandler : ZeroWAS.Http.HttpHeadler
-        {
-            private Action<ZeroWAS.IHttpContext> callback;
-            public CustomHttpHandler(string handlerKey, string pathAndQueryPattern, Action<ZeroWAS.IHttpContext> callback)
-                : base(handlerKey, pathAndQueryPattern)
-            {
-                this.callback = callback;
-            }
-
-            public override void ProcessRequest(ZeroWAS.IHttpContext context)
-            {
-                if (callback!=null)
-                {
-                    callback(context);
-                }
-                else
-                {
-                    base.ProcessRequest(context);
-                }
-            }
-
-        }
-
 
     }
     

@@ -98,7 +98,6 @@ namespace ZeroWAS.Http
 
                         break;
                     case 1:
-
                         #region -- 待读取请求头部 --
                         byte[] bytes2 = bytes.ToArray();
                         byte[] doubleNewlineCharBytes = new byte[] { newlineCharBytes[0], newlineCharBytes[1], newlineCharBytes[0], newlineCharBytes[1] };
@@ -323,7 +322,6 @@ namespace ZeroWAS.Http
                 if (!m.Success)
                 {
                     request.InputStream.Close();
-                    receiveErrorHttpStatus = Status.Bad_Request;
                     ReceiveErrorMsg = "缺少boundary";
                     return false;
                 }
@@ -361,7 +359,6 @@ namespace ZeroWAS.Http
                 catch (Exception ex)
                 {
                     ReceiveErrorMsg = (ex.Message);
-                    receiveErrorHttpStatus = Status.Bad_Request;
                     return false;
                 }
             }
@@ -423,13 +420,21 @@ namespace ZeroWAS.Http
                 string hostName = request.Header["Host"];
                 if (string.IsNullOrEmpty(hostName))
                 {
-                    hostName = httpServer.HostName;
+                    hostName = "unknown.org";
+                    if (request.HttpVersionNumber > 10)
+                    {
+                        ReceiveErrorMsg = "Missing Host header.";
+                        receiveErrorHttpStatus = Status.Bad_Request;
+                        request.URI = new Uri(string.Format("{0}://{1}{2}", httpServer.UseHttps ? "https" : "http", hostName, request.Path));
+                        return false;
+                    }
                 }
                 string userAgent = request.Header["User-Agent"];
                 if (string.IsNullOrEmpty(userAgent))
                 {
                     userAgent = string.Format("None (FROM {0})", userRemoteAddress);
                 }
+                request.HostName = hostName;
                 request.UserAgent = userAgent;
                 request.URI = new Uri(string.Format("{0}://{1}{2}", httpServer.UseHttps ? "https" : "http", hostName, request.Path));
             }
@@ -444,7 +449,7 @@ namespace ZeroWAS.Http
                 string[] s1 = requestLine.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 if (s1.Length < 3)
                 {
-                    receiveErrorHttpStatus = Status.Bad_Request;
+                    ReceiveErrorMsg = "Request line error.";
                     return false;
                 }
                 request = new Request();
@@ -453,6 +458,26 @@ namespace ZeroWAS.Http
                 request.Method = s1[0];
                 request.Path = s1[1];
                 request.HttpVersion = s1[2];
+                int num = 0;
+                switch (s1[2])
+                {
+                    case "HTTP/0.9":
+                        num = 9;
+                        break;
+                    case "HTTP/1.0":
+                        num = 10;
+                        break;
+                    case "HTTP/1.1":
+                        num = 11;
+                        break;
+                    case "HTTP/2.0":
+                        num = 20;
+                        break;
+                    case "HTTP/3.0":
+                        num = 30;
+                        break;
+                }
+                request.HttpVersionNumber = num;
                 request.Header = new System.Collections.Specialized.NameValueCollection();
                 int index = request.Path.IndexOf('?');
                 if (index > 0 && index + 1 < request.Path.Length)

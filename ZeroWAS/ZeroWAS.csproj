@@ -7,12 +7,12 @@
 		<PackageIcon>favicon.png</PackageIcon>
 		<ProduceReferenceAssembly>False</ProduceReferenceAssembly>
 		<Authors>ruzi</Authors>
-		<AssemblyVersion>1.2.9.0</AssemblyVersion>
-		<FileVersion>1.2.9.0</FileVersion>
-		<Version>1.2.9.0</Version>
+		<AssemblyVersion>1.3.0.0</AssemblyVersion>
+		<FileVersion>1.3.0.0</FileVersion>
+		<Version>1.3.0.0</Version>
 		<Description>A web application server written in C#, starting from .Net20, supports Http1.0/1.1, supports upgrading to WebSocket and Socket communication, so that traditional desktop applications can easily provide external data interaction interfaces.Starting with version 1.2.3, HttpHandler uses regular expressions for URL matching. Starting with version 1.2.6, UploadFile adds the SaveTo(stream) method, allowing file content to be saved directly to a stream.</Description>
 		<PackageProjectUrl>https://github.com/13039520/ZeroWAS</PackageProjectUrl>
-		<PackageReleaseNotes>Fixed a parsing issue with application/x-www-form-urlencoded in the previous version.</PackageReleaseNotes>
+		<PackageReleaseNotes>Added URL route matching options: suffix matching, full matching, and prefix matching.</PackageReleaseNotes>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	</PropertyGroup>
 	<ItemGroup>

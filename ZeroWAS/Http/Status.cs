@@ -151,6 +151,10 @@ namespace ZeroWAS.Http
         /// </summary>
         Expectation_Failed = 417,
         /// <summary>
+        /// 请求被发送到了一个无法为该 Host 提供服务的服务器（HTTP 2.0 版本）
+        /// </summary>
+        Misdirected_Request = 421,
+        /// <summary>
         /// 内部服务器错误
         /// </summary>
         Internal_Server_Error = 500,

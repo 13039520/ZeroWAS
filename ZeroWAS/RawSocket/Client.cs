@@ -41,7 +41,7 @@ namespace ZeroWAS.RawSocket
         bool isConnencted = false;
         long clinetId = 0;
         System.Exception lastException = null;
-        System.Uri TargetURI = null;
+        readonly System.Uri TargetURI = null;
 
         /// <summary>
         /// 连接成功标识
@@ -234,6 +234,7 @@ namespace ZeroWAS.RawSocket
         private void HttpUpgrade()
         {
             string data = "GET " + TargetURI.PathAndQuery + " HTTP/1.1\r\n"
+                + "Host:" + TargetURI.Authority + "\r\n"
                 + "Upgrade:rawsocket\r\n\r\n";
             byte[] buffer = System.Text.Encoding.UTF8.GetBytes(data);
             socket.Send(buffer, buffer.Length, System.Net.Sockets.SocketFlags.None);

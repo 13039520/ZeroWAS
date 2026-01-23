@@ -415,7 +415,7 @@ namespace ZeroWAS.WebSocket
             string data = "GET " + TargetURI.PathAndQuery + " HTTP/1.1\r\n"
                     + "Upgrade:websocket\r\n"
                     + "Connection:Upgrade\r\n"
-                    + "Host:"+ TargetURI.Host+"\r\n"
+                    + "Host:" + TargetURI.Authority + "\r\n"
                     + "Sec-WebSocket-Key:"+ this.SecWebSocketKey + "\r\n"
                     + "Sec-WebSocket-Version:" + this.SecWebSocketVersion + "\r\n\r\n";
 
