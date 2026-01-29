@@ -20,11 +20,7 @@ namespace ZeroWAS.App
             ZeroWAS.CacheDir.SetDirPath(@"D:\_cache_");
             if (ZeroWASInit())
             {
-<<<<<<< HEAD
                 RSClientInit(1);
-=======
-                //RawSocketClientInit(1);
->>>>>>> cf266bca3da4a0b80ef2faa7babe5ac4017d693d
                 //WebSocketClientInit(5);
                 Console.WriteLine("HostName=>{0}", webServer.WebApp.HostName);
                 while (true)
@@ -47,7 +43,6 @@ namespace ZeroWAS.App
         static bool isRawSocketClientInit = false;
         static void ReceivedHandle0x01(IRawSocketReceivedMessage msg)
         {
-<<<<<<< HEAD
             Console.WriteLine("RS_Client Received: [{0}]{1}", msg.ContentLength, msg.ReadContentAsString(Encoding.UTF8));
         }
         static void ReceivedHandle0xff(IRawSocketReceivedMessage msg)
@@ -68,10 +63,6 @@ namespace ZeroWAS.App
         {
             rsClient = new RawSocket.Client(new Uri("http://127.0.0.1:6005/RawSocket?uid=" + uid));
             rsClient.OnConnectErrorHandler = (e) => {
-=======
-            rawSocketClient = new RawSocket.Client(new Uri("http://127.0.0.1:6005/RawSocket?uid=" + uid));
-            rawSocketClient.OnConnectErrorHandler = (e) => {
->>>>>>> cf266bca3da4a0b80ef2faa7babe5ac4017d693d
                 Console.WriteLine(e.SocketException.Message);
                 e.Retry = true;
             };
@@ -148,11 +139,7 @@ namespace ZeroWAS.App
             System.IO.FileInfo config = new System.IO.FileInfo(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "site.txt"));
             webServer = new ZeroWAS.WebServer<string>(3000, ZeroWAS.WebApplication.FromFile(config));
             webServer.WebApp.AddService(typeof(UserService), new UserService());
-            
-<<<<<<< HEAD
-=======
-            
->>>>>>> cf266bca3da4a0b80ef2faa7babe5ac4017d693d
+
             webServer.AddHttpHandler(new HttpHandlers.SuffixHttpHandler("ImageHandler",new string[] {".jpg",".jpeg",".png", ".gif", ".webp" }, (context) =>
             {
                 System.IO.FileInfo fileInfo = context.Server.GetStaticFile(context.Request.URI.AbsolutePath);
