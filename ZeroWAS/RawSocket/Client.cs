@@ -46,8 +46,11 @@ namespace ZeroWAS.RawSocket
         long clientId = 0;
         System.Exception lastException = null;
         readonly System.Uri TargetURI = null;
+<<<<<<< HEAD
         Dictionary<byte, ReceivedHandler> receivedHandlers = new Dictionary<byte, ReceivedHandler>();
         private readonly object _handlerLock = new object();
+=======
+>>>>>>> cf266bca3da4a0b80ef2faa7babe5ac4017d693d
 
         /// <summary>
         /// 连接成功标识
