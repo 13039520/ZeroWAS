@@ -270,6 +270,7 @@ namespace ZeroWAS.App
                             reply = new SendMessage(1, "File Not Found.", "");
                         }
                         context.SendData(reply, context.User);
+                        reply.Dispose();
                     }
                 }
             });
